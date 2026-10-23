@@ -16,9 +16,10 @@ if (!Number.isInteger(keep) || keep < 1) die('--keep must be a positive integer'
 if (!fs.existsSync(config.dbPath)) die(`database not found: ${config.dbPath}`);
 fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
 
-const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+const stamp = new Date().toISOString().replace(/[-:.]/g, '');
 const target = path.join(dir, `marugoto-bingo-${stamp}.sqlite`);
-const src = new DatabaseSync(config.dbPath, { readOnly: true });
+// Not read-only: a WAL database reader needs write access to the -shm file.
+const src = new DatabaseSync(config.dbPath);
 src.exec('PRAGMA busy_timeout = 10000');
 src.prepare('VACUUM INTO ?').run(target);
 src.close();
@@ -30,6 +31,6 @@ copy.close();
 if (Object.values(check)[0] !== 'ok') die(`integrity_check failed for ${target}`);
 fs.chmodSync(target, 0o600);
 
-const files = fs.readdirSync(dir).filter((f) => /^marugoto-bingo-\d{8}T\d{6}Z\.sqlite$/.test(f)).sort();
+const files = fs.readdirSync(dir).filter((f) => /^marugoto-bingo-\d{8}T\d{9}Z\.sqlite$/.test(f)).sort();
 for (const f of files.slice(0, Math.max(0, files.length - keep))) fs.unlinkSync(path.join(dir, f));
 console.log(`backup ok: ${target} (revision ${rev?.revision ?? 'n/a'}, saved ${rev?.saved_at ?? 'n/a'})`);

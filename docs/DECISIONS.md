@@ -41,3 +41,35 @@ Related tests:
 ```
 
 決定権限がないClaude Codeや開発者だけで、運営判断が必要な項目を承認済みにしないでください。
+
+## 2026-10-23 実装時点の扱い
+
+状態 `USER-REQUESTED` は、このリポジトリの利用者が会話で明示した指示です。主催者や運営の正式承認かどうかは確認していません。運営の承認が得られたら、決定ログの形式で `APPROVED` として追記してください。`PROVISIONAL` は、承認がないまま安全側の既定値で実装し、設定やコード上の `TODO(DECISION-Cxx)` で追跡している事項です。
+
+| ID | 状態 | 現在の実装 | 変更するとき |
+|---|---|---|---|
+| U01 | USER-REQUESTED | スタンプQRは9個で、①〜⑨の各マスに1個ずつ固定で対応する（C19の「同文言3マスの割当」は、マス固定の方式になる） | `stamp_points.cell_index` を空にして `category` を入れれば種別順埋めにも対応できる |
+| U02 | USER-REQUESTED | 来場者がマスをタップすると、そのマスのQR読取ボタンが出る。タップだけではマスは達成にならない。別のマスのQRは拒否する | `cardModel.cellForPoint` |
+| U03 | USER-REQUESTED | 来場者のスマホ画面はスクロール不要の1画面構成。受付用QR、ブース詳細、一覧はダイアログで開く | `web/visitor/` |
+| U04 | USER-REQUESTED | デジタルカードの外観は紙カード画像を基準にする。既存Webアプリのスクリーンショットと矛盾する点（マスの文言など）は紙カードと指示を優先し、下部タブ、ブース選択欄、体験済の印は取り入れた | `web/visitor/card.js` |
+| C01 | PROVISIONAL | 心拍が必要なのは自動読取モードの台だけ（`heartbeatPolicy: auto_only`）。管理画面で「常に必要」「不要」に切替可能 | 管理タブ、`state.js` |
+| C02 | PROVISIONAL | 台ごとに手入力モードと自動読取モードを持ち、待機中にだけ理由付きで切り替える。手入力モード中の自動読取は記録のみで在庫と当選に数えない。自動モード中は手入力を拒否する | `balls.js` |
+| C03 | PROVISIONAL | 受付世代ID（券番号）を `GET /state` で配り、出玉イベントの `generation` と照合する。不一致は未割当、なしは要確認 | `balls.js ballDetected` |
+| C04 | OPEN | 紙カードは受付ごとに新しい内部IDを作るだけで、同じ紙の再提示は検出できない。角の有無の確認と理由入力だけを実装 | 運営手順の決定が必要 |
+| C05 | PROVISIONAL | 手書き券の記録は既定で無効（`allowManualVoucher: false`）。有効にすると管理者が理由付きで記録し、引換条件に含める | 管理タブ |
+| C06 | PROVISIONAL | Cookie認証の `/api/*` 状態変更要求はOrigin一致を必須にし、`/api/device/*` はBearerのみで認証する | `http/security.js` |
+| C07 | PROVISIONAL | 受付の競合検査は台別revision（`expectedMachineRevision`）。出玉は券番号で対象を指定し、クライアント側の送信キューで1件ずつ別operationIdで送る | `CommandQueue` |
+| C08 | PROVISIONAL | 既存operationIdの結果を先に返し、そのあと新規操作だけrevisionを検査する。同じIDで別内容は409 | `drawService.execute` |
+| C09/C10 | PROVISIONAL | 受信進捗は `(machine, bootId, stream)` ごとに `device_streams` に保存。カード読取は `card_reads` 専用表 | migration 001 |
+| C11 | PROVISIONAL | 「停止解除」と「再開」を別の操作に分けた。停止中の自動読取の出玉は要確認 | `safety.js` |
+| C13 | PROVISIONAL | 印刷ジョブは queued、dispatched（ブラウザが印刷実行）、confirmed（人が排紙確認）、failed（再印刷を自動で積む）。引換はdispatched以上で可 | `finish.js` |
+| C16 | OPEN | アンケートは設問、年齢区分、同意文が未決定のため既定で非公開。管理者が設定すると公開できる | 管理タブ |
+| C17 | PROVISIONAL | 景品は「総数」「確保済み（未引換を含む）」「うち引換済み」「残り＝総数−確保済み」で管理。不足時は保留して確定を拒否し、再試行のみ用意（不足後の判断手順は未定義） | `balls.js reconcileSession` |
+| C19 | PROVISIONAL | ⑤の初期達成は既定で無効（9個目のQRで達成）。管理画面で切替可能 | 管理タブ |
+| C21 | PROVISIONAL | 1DBに1イベント。次回は別DBを作る | migration 001 |
+| C22 | PROVISIONAL | Cookieトークンはsha256のみ保存。QR claimはサーバー秘密 `CARD_CLAIM_SECRET` とカードIDのHMACで、保存せず再計算する | `secrets.js` |
+| C23 | PROVISIONAL | カード発行はIP毎分60件、スタンプはカード毎分20件とIP毎分240件、ログインは同一名10分5回失敗でロック。スタッフセッション14時間 | 想定来場者数で試験が必要 |
+| C24 | OPEN | 5分ごとのVACUUM INTOバックアップと288世代保持（約1日）を雛形にした。許容損失と復元後の手順は未決定 | `deploy/` |
+| C25 | OPEN | 公開ドメイン未確定。`PUBLIC_ORIGIN` が仮の値だと本番起動を拒否する | 環境変数 |
+| 技術 | PROVISIONAL | SQLiteは `better-sqlite3` ではなくNode.js内蔵の `node:sqlite` を使う。ネイティブビルドが不要でZIP移設に向くため。Node.js 22.13以上が必要で、22では実験的機能の扱い | `package.json engines` |
+| 印刷 | OPEN | プリンター機種と用紙幅は未確定。発券画面で58mmと80mmを切り替えられる | 実機確認が必要 |

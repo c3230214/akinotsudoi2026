@@ -72,7 +72,7 @@ function renderCard() {
     <div class="card-bar">
       <p class="status-line" role="status">${statusText(c)}</p>
       ${c.used ? '' : html`<p class="tap-hint">体験したらマスをタップしてブースのQRを読み取ろう</p>`}
-      <p class="rule">1〜2ライン：1回 ／ 3〜7ライン：2回 ／ 全8ライン：3回　抽選は一度だけ</p>
+      <p class="rule">1〜2ライン：1回／3〜7：2回／全8：3回　抽選は一度だけ</p>
       <div class="bar-buttons">
         <button type="button" class="btn btn-secondary" id="show-qr" ${c.used || c.draws === 0 ? 'disabled' : ''}>受付用QRを表示</button>
       </div>

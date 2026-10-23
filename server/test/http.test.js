@@ -295,3 +295,27 @@ test('CSV出力は数式を無害化しBOM付き', async (t) => {
   assert.ok(r.res.body.startsWith('﻿'));
   assert.equal(ORIGIN.length > 0, true);
 });
+
+test('42: VACUUM INTO のバックアップから起動すると、使用済みカード・景品確保・印刷待ち・引換状態が一致する', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mb-backup-'));
+  const f = await makeApp({ dbPath: path.join(dir, 'live.sqlite') });
+  const admin = await f.staff('admin', 'adminb');
+  await f.setupInventory(admin);
+  const rev = () => f.svc.draw.getState().machines['garagara-1'].revision;
+  const acc = await f.req('POST', '/api/staff/cards/accept', { cookie: admin, body: { kind: 'paper', machineId: 'garagara-1', expectedMachineRevision: rev(), operationId: f.op(), marks: ONE_LINE, cornerPresent: true } });
+  const sid = acc.json.result.sessionId;
+  await f.command(admin, { type: 'manualBall', machineId: 'garagara-1', sessionId: sid, color: 'green' });
+  await f.command(admin, { type: 'finalizeResult', machineId: 'garagara-1', sessionId: sid, trayEmptied: true });
+  const backup = path.join(dir, 'backup.sqlite');
+  f.db.prepare('VACUUM INTO ?').run(backup);
+  const before = f.svc.draw.getState();
+  await f.close();
+  f.db.close();
+  const g = await makeApp({ dbPath: backup });
+  t.after(async () => { await g.close(); g.db.close(); });
+  const after = g.svc.draw.getState();
+  assert.deepEqual(after, before);
+  assert.equal(after.sessions[sid].voucher.jobs[0].status, 'queued');
+  assert.equal(after.prizes.green.allocated, 1);
+  assert.ok(g.db.prepare('SELECT used_at FROM cards WHERE used_session_id = ?').get(sid).used_at);
+});

@@ -1,0 +1,12 @@
+[Unit]
+Description=Marugoto Bingo expired image purge
+
+[Service]
+Type=oneshot
+User=marugoto-bingo
+Group=marugoto-bingo
+WorkingDirectory=/opt/marugoto-bingo/current/server
+EnvironmentFile=/etc/marugoto-bingo/marugoto-bingo.env
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning scripts/purgeImages.js
+ProtectSystem=strict
+ReadWritePaths=/var/lib/marugoto-bingo

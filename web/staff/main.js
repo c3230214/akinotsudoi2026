@@ -1,5 +1,5 @@
-import { ApiError, CommandQueue, getJson, operationId, postJson, api, sendWithRetry } from '../shared/api.js';
-import { $, $$, COLORS, COLOR_LABELS, esc, fmtDateTime, fmtTime, html, previewDraws, raw, render, toast } from '../shared/html.js';
+import { ApiError, CommandQueue, api, getJson, operationId, postJson, sendWithRetry } from '../shared/api.js';
+import { $, $$, COLORS, COLOR_LABELS, fmtDateTime, fmtTime, html, previewDraws, raw, render, toast } from '../shared/html.js';
 import { openStream } from '../shared/stream.js';
 import { scanQr } from '../shared/scanner.js';
 
@@ -777,4 +777,3 @@ async function adminAct(name) {
 }
 
 boot();
-export { esc };

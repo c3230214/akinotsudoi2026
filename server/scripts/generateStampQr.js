@@ -57,7 +57,7 @@ for (const p of points) {
   const cell = CELLS[p.cellIndex];
   blocks.push(`<section class="sheet"><div class="num">${CIRCLED[p.cellIndex]}</div><h1>${esc(cell.label)}</h1>
 <div class="qr">${svg}</div>
-<p class="how">スマホのデジタルビンゴカード画面で「スタンプQRを読む」を押して読み取ってください</p>
+<p class="how">スマホのデジタルビンゴカードで「${CIRCLED[p.cellIndex]}」のマスをタップし、「QRコードを読み取る」で読み取ってください</p>
 <p class="meta">まるごと体験ビンゴ スタンプQR ${CIRCLED[p.cellIndex]}（${esc(p.pointId)}）</p></section>`);
 }
 fs.writeFileSync(path.join(outDir, 'stamp-qr-print.html'), `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>スタンプQR印刷用</title>

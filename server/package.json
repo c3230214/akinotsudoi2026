@@ -1,9 +1,9 @@
 {
   "name": "marugoto-bingo-server",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
   "private": true,
   "type": "module",
-  "description": "Starter server for the Marugoto Experience Bingo event system",
+  "description": "Marugoto Experience Bingo event system server",
   "engines": {
     "node": ">=22.13.0"
   },

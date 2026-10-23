@@ -1,0 +1,12 @@
+# Every 5 minutes (§11). TODO(DECISION-C24): retention and acceptable loss are undecided.
+[Unit]
+Description=Marugoto Bingo backup every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=10s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

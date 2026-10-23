@@ -1,0 +1,16 @@
+# Template only. Replace the host after DNS and the university's publication
+# approval are confirmed (DECISION-C25). Caddy obtains the certificate
+# automatically when port 80/443 are reachable; otherwise configure `tls`.
+CHANGE-ME.example.invalid {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000 {
+		# Server-Sent Events: send each event at once.
+		flush_interval -1
+	}
+	request_body {
+		max_size 1MB
+	}
+	log {
+		output file /var/log/caddy/marugoto-bingo.log
+	}
+}
