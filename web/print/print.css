@@ -1,0 +1,20 @@
+.phead { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: #fff; border-bottom: 2px solid var(--accent); }
+.phead h1 { margin: 0; font-size: 1.2em; }
+main { max-width: 900px; margin: 0 auto; padding: 0 12px 40px; }
+.conn-online { color: var(--ok); font-weight: 700; }
+.conn-offline { color: var(--danger); font-weight: 700; }
+.job { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border-bottom: 1px solid var(--line); }
+.job .vno { font-size: 1.4em; font-weight: 900; min-width: 6em; }
+.receipt { display: none; }
+@media print {
+  .screen { display: none !important; }
+  .receipt { display: block; color: #000; font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif; }
+  .r-title { font-size: 12pt; font-weight: 700; margin: 0; }
+  .r-label { font-size: 16pt; font-weight: 900; margin: 2mm 0; border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 1mm 0; text-align: center; }
+  .r-no { font-size: 22pt; font-weight: 900; text-align: center; margin: 1mm 0; letter-spacing: .05em; }
+  .r-prizes { list-style: none; padding: 0; margin: 2mm 0; font-size: 12pt; }
+  .r-prizes li { margin: 1mm 0; }
+  .r-qr { display: block; margin: 2mm auto; width: 28mm; height: 28mm; }
+  .r-meta { font-size: 8pt; margin: 1mm 0; }
+  .r-note { font-size: 8pt; margin-top: 2mm; }
+}

@@ -1,0 +1,3 @@
+/* 80 mm roll: about 72 mm printable. TODO(DECISION-printer): model and width unconfirmed. */
+@page { size: 80mm auto; margin: 3mm 4mm; }
+.receipt { width: 72mm; }

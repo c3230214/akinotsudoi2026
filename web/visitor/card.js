@@ -46,7 +46,7 @@ export function renderCardFace(card) {
         <span class="cell-num" aria-hidden="true">${CIRCLED[c.index]}</span>
         <span class="cell-text${c.category === 'committee' ? ' cell-text-long' : ''}" aria-hidden="true">${raw(TEXT[c.category])}</span>
         ${raw(ART[c.index])}
-        ${c.marked ? raw(`${STAMP_MARK}<span class="cell-done" aria-hidden="true">達成</span>`) : ''}
+        ${c.marked ? raw(`${STAMP_MARK}<span class="cell-done" aria-hidden="true">体験済</span>`) : ''}
       </button>
     </li>`);
   return html`

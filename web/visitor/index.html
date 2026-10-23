@@ -10,11 +10,6 @@
   <script type="module" src="/visitor/main.js"></script>
 </head>
 <body>
-  <nav class="tabs" aria-label="画面の切り替え">
-    <a href="#card" data-route="card">カード</a>
-    <a href="#map" data-route="map">マップ</a>
-    <a href="#survey" data-route="survey">アンケート</a>
-  </nav>
   <main id="main">
     <section id="view-card" class="view" data-view="card"><p class="loading">読み込み中…</p></section>
     <section id="view-map" class="view view-map" data-view="map" hidden>
@@ -24,12 +19,20 @@
         <button type="button" class="map-btn" data-map="in" aria-label="拡大">＋<span class="map-btn-text">拡大</span></button>
         <button type="button" class="map-btn" data-map="out" aria-label="縮小">－<span class="map-btn-text">縮小</span></button>
         <button type="button" class="map-btn" data-map="fit" aria-label="会場全体を表示">⌂<span class="map-btn-text">全体</span></button>
-        <button type="button" class="map-btn" data-map="list" aria-label="ブース一覧を開く">☰<span class="map-btn-text">一覧</span></button>
       </div>
       <p class="map-hint" id="map-hint">ブース・ステージをタップすると詳細</p>
+      <div class="map-pick">
+        <label for="map-select">ブースを選ぶ<span class="muted">（タップしにくい場合はこちら）</span></label>
+        <select id="map-select"><option value="">一覧から選ぶ</option></select>
+      </div>
     </section>
     <section id="view-survey" class="view" data-view="survey" hidden></section>
   </main>
+  <nav class="tabs" aria-label="画面の切り替え">
+    <a href="#card" data-route="card"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16" stroke="currentColor" stroke-width="1.5"/></svg>ビンゴ</a>
+    <a href="#map" data-route="map"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z M9 4v14 M15 6v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>会場マップ</a>
+    <a href="#survey" data-route="survey"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="2"/></svg>アンケート</a>
+  </nav>
   <dialog id="detail" aria-labelledby="detail-title">
     <div class="sheet">
       <div class="sheet-head">

@@ -49,7 +49,7 @@ async function loadCard() {
 function statusText(c) {
   if (c.used) return html`<strong>抽選済み</strong>（${fmtTime(c.usedAt)}）`;
   if (c.draws === 0) return html`ラインがそろうと抽選できます`;
-  return html`<span class="big">${c.lines}</span>ライン ／ 抽選<span class="big">${c.draws}</span>回`;
+  return html`<span class="big">${c.lines}</span>ライン達成 ／ <span class="big">${c.draws}</span>回 抽選できるよ！`;
 }
 
 function renderCard() {
@@ -71,7 +71,8 @@ function renderCard() {
     <div class="card-fit">${renderCardFace(c)}</div>
     <div class="card-bar">
       <p class="status-line" role="status">${statusText(c)}</p>
-      ${c.used ? '' : html`<p class="tap-hint">体験したらマスをタップしてQRコードを読み取ります</p>`}
+      ${c.used ? '' : html`<p class="tap-hint">体験したらマスをタップしてブースのQRを読み取ろう</p>`}
+      <p class="rule">1〜2ライン：1回 ／ 3〜7ライン：2回 ／ 全8ライン：3回　抽選は一度だけ</p>
       <div class="bar-buttons">
         <button type="button" class="btn btn-secondary" id="show-qr" ${c.used || c.draws === 0 ? 'disabled' : ''}>受付用QRを表示</button>
       </div>
@@ -158,29 +159,28 @@ async function showMap() {
         if (a === 'in') state.mapApi.zoomIn();
         if (a === 'out') state.mapApi.zoomOut();
         if (a === 'fit') state.mapApi.fit();
-        if (a === 'list') openPlaceList();
       });
     }
   }
+  fillPlaceSelect();
   if (!state.map.places.length) $('#map-hint').textContent = state.map.venue.note || '会場配置は準備中です';
 }
 
-function openPlaceList() {
+function fillPlaceSelect() {
+  const sel = $('#map-select');
+  if (sel.dataset.filled) return;
+  sel.dataset.filled = '1';
   const { places } = state.map;
-  if (!places.length) {
-    openSheet('ブース一覧', html`<p class="notice">ブース情報は準備中です。</p>`);
-    return;
-  }
   const groups = ['stage', 'booth', 'facility', 'outdoor', 'area'].map((kind) => [kind, places.filter((p) => p.kind === kind)]).filter(([, list]) => list.length);
-  openSheet('ブース・施設の一覧', html`${groups.map(([kind, list]) => html`
-    <h3 class="list-kind">${KIND_LABELS[kind]}</h3>
-    <ul class="place-list">${list.map((p) => html`<li><button type="button" class="place-item" data-id="${p.id}">${p.name}</button></li>`)}</ul>`)}`);
-  for (const b of $$('.place-item', $('#detail-body'))) {
-    b.addEventListener('click', () => {
-      state.mapApi.focus(b.dataset.id);
-      openDetail(places.find((p) => p.id === b.dataset.id));
-    });
-  }
+  sel.insertAdjacentHTML('beforeend', String(html`${groups.map(([kind, list]) => html`<optgroup label="${KIND_LABELS[kind]}">${list.map((p) => html`<option value="${p.id}">${p.name}</option>`)}</optgroup>`)}`));
+  sel.disabled = places.length === 0;
+  sel.addEventListener('change', () => {
+    const id = sel.value;
+    if (!id) return;
+    state.mapApi.focus(id);
+    openDetail(places.find((p) => p.id === id));
+    sel.value = '';
+  });
 }
 
 const MISSING = '未登録';

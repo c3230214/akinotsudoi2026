@@ -1,0 +1,67 @@
+body { background: #f4efe9; }
+.topbar { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 8px 12px; background: #fff; border-bottom: 2px solid var(--accent); }
+.brand { color: var(--accent-dark); }
+.who { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.conn { font-weight: 700; font-size: .9em; }
+.conn-online { color: var(--ok); }
+.conn-offline { color: var(--danger); }
+.stabs { display: flex; overflow-x: auto; background: #fff; border-bottom: 1px solid var(--line); }
+.stabs a { padding: 12px 16px; font-weight: 700; color: var(--muted); text-decoration: none; white-space: nowrap; min-height: 48px; }
+.stabs a[aria-current] { color: var(--accent-dark); border-bottom: 4px solid var(--accent); }
+main { max-width: 1100px; margin: 0 auto; padding: 0 12px 40px; }
+.login { max-width: 420px; margin: 40px auto; }
+.between { justify-content: space-between; }
+.mhead h1 { font-size: 1.3em; margin: 0; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.cols > .panel { margin: 12px 0 0; }
+.wide { width: 100%; }
+.small { font-size: .85em; }
+.check { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.check input { width: 24px; height: 24px; min-height: auto; }
+.toggles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-width: 360px; }
+.toggle { min-height: 72px; border-radius: 10px; border: 2px solid var(--line); background: #fff; font: inherit; font-weight: 800; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: manipulation; }
+.toggle.on { background: #fde2d6; border-color: var(--accent-dark); color: var(--accent-dark); }
+.toggle.unknown { background: #fff6e5; border-color: var(--warn); border-style: dashed; }
+.tnum { font-size: 1.3em; }
+.tval { font-size: .85em; }
+.preview { font-size: 1.1em; }
+.read-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.read-img { width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+@media (max-width: 700px) { .read-grid { grid-template-columns: 1fr; } }
+.result { margin-top: 10px; }
+.session h2 { margin: 0; }
+.remain { font-size: 1.3em; margin: 0; }
+.remain strong { font-size: 1.6em; color: var(--accent-dark); }
+.color-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0 4px; }
+.cbtn { min-height: 88px; border-radius: 14px; border: 3px solid #333; font: inherit; font-size: 1.4em; font-weight: 900; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; touch-action: manipulation; }
+.cbtn:active { transform: scale(.97); }
+.cbtn .ball { width: 1.2em; height: 1.2em; }
+.cbtn-red { background: #fbe0de; }
+.cbtn-green { background: #dff1e1; }
+.cbtn-lightblue { background: #ddeffb; }
+.cbtn-white { background: #fff; }
+.balls { list-style: none; padding: 0; margin: 12px 0; }
+.ballrow { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px; border-bottom: 1px solid var(--line); }
+.ballrow .ord { font-weight: 800; min-width: 3.5em; }
+.ballrow .kind { font-weight: 700; }
+.kind-excess { color: var(--muted); }
+.needs-review { background: #fff6e5; }
+.chip.warn { border-color: var(--warn); color: var(--warn); }
+.ballacts { margin-left: auto; }
+.ballacts select { min-height: 36px; padding: 2px 6px; }
+.finalize { border-top: 2px dashed var(--line); padding-top: 12px; }
+.plain { list-style: none; padding: 0; }
+.plain li { padding: 4px 0; }
+.voucher-box { margin-top: 12px; border: 3px solid var(--ok); border-radius: 12px; padding: 12px; }
+.voucher-box.is-done { border-color: var(--danger); }
+.vnum { font-size: 2em; font-weight: 900; margin: 0; }
+.prizes { list-style: none; padding: 0; font-size: 1.2em; }
+.counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.counts label { display: flex; align-items: center; gap: 6px; }
+.counts input { width: 6em; }
+.warn-text { color: var(--danger); }
+.ok-text { color: var(--ok); }
+tr.rejected td { color: var(--danger); }
+.code { font-size: 1.6em; letter-spacing: .15em; font-family: ui-monospace, monospace; }
+.code-area { min-height: 320px; font-family: ui-monospace, monospace; font-size: 13px; }
+.sheet { padding: 16px; }

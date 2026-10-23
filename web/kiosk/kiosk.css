@@ -1,0 +1,21 @@
+html, body { height: 100%; }
+body { background: #fff8f0; overflow: hidden; }
+main { height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; gap: 16px; padding: 20px 28px; }
+.k-head { display: flex; justify-content: space-between; align-items: baseline; }
+.k-head h1 { margin: 0; color: var(--accent-dark); font-size: 2em; }
+.k-machine { font-size: 1.6em; font-weight: 800; }
+.k-main { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 20px; }
+.k-instruction { font-size: clamp(28px, 5vw, 56px); font-weight: 900; margin: 0; line-height: 1.35; }
+.k-remaining { font-size: clamp(90px, 18vw, 200px); font-weight: 900; line-height: 1; color: var(--accent); margin: 0; }
+.k-remaining small { font-size: .25em; color: var(--ink); }
+.k-balls { list-style: none; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; padding: 0; margin: 0; }
+.k-balls li { display: flex; flex-direction: column; align-items: center; font-size: 1.4em; font-weight: 800; }
+.k-balls .ball { width: 72px; height: 72px; border-width: 4px; }
+.k-balls .kind { font-size: .7em; color: var(--muted); }
+.k-grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.k-grade { background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 10px; text-align: center; font-weight: 800; font-size: 1.15em; }
+.k-grade .ball { width: 1.4em; height: 1.4em; }
+.k-grade.sold { opacity: .5; }
+.k-stopped .k-instruction { color: var(--danger); }
+.sound { position: fixed; right: 12px; bottom: 12px; min-height: 44px; border-radius: 10px; border: 2px solid var(--line); background: #fff; font: inherit; font-weight: 700; padding: 0 12px; }
+.pair { max-width: 480px; margin: auto; }
