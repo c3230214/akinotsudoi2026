@@ -1,0 +1,25 @@
+# Template only: review paths, account, writable directories and Node.js path before use.
+[Unit]
+Description=Marugoto Bingo Web Application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=marugoto-bingo
+Group=marugoto-bingo
+WorkingDirectory=/opt/marugoto-bingo/current/server
+EnvironmentFile=/etc/marugoto-bingo/marugoto-bingo.env
+ExecStart=/usr/bin/node src/main.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/marugoto-bingo
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

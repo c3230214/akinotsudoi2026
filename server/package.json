@@ -1,0 +1,19 @@
+{
+  "name": "marugoto-bingo-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Starter server for the Marugoto Experience Bingo event system",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "node --watch src/main.js",
+    "start": "node src/main.js",
+    "test": "node --test",
+    "test:watch": "node --test --watch"
+  },
+  "dependencies": {
+    "fastify": "^5.0.0"
+  }
+}
