@@ -4,6 +4,7 @@ import { invalid } from '../errors.js';
 
 // TODO(DECISION-C21): the prefix is fixed to this event; a later event needs its own.
 export const QR_PREFIX = 'MARUGOTO2026';
+const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 const TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
 const CARD_ID_RE = /^D[0-9A-HJKMNP-TV-Z]{8}$/;
 
@@ -58,7 +59,17 @@ export function marksFromStamps(stamps, { centerMarked = false } = {}) {
  * category point fills the lowest-numbered empty cell of its category.
  * TODO(DECISION-C19): the category rule is the spec's provisional proposal.
  */
-export function cellForPoint(point, marks) {
+export function cellForPoint(point, marks, chosenCell = null) {
+  if (chosenCell !== null) {
+    // The visitor tapped a cell and then scanned: the QR must belong to it.
+    const target = CELLS[chosenCell];
+    const fits = Number.isInteger(point.cellIndex) ? point.cellIndex === chosenCell : point.category === target.category;
+    if (!fits) {
+      const right = Number.isInteger(point.cellIndex) ? `${CIRCLED[point.cellIndex]}のマス` : 'ほかのマス';
+      invalid(`このQRコードは${right}用です。${CIRCLED[chosenCell]}のマスには使えません`);
+    }
+    return marks[chosenCell] ? null : chosenCell;
+  }
   if (Number.isInteger(point.cellIndex)) return marks[point.cellIndex] ? null : point.cellIndex;
   const cell = CELLS.find((c) => c.category === point.category && !marks[c.index]);
   return cell ? cell.index : null;

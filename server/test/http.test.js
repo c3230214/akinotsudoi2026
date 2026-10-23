@@ -79,9 +79,12 @@ test('スタンプQRでマスを埋め、デジタル受付でNをサーバー�
   const tokens = f.stampPoints();
   const visitor = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
   for (const i of [0, 1, 2]) {
-    const s = await f.req('POST', '/api/visitor/stamps', { cookie: visitor, body: { payload: `MARUGOTO2026:STAMP:${tokens[i]}` } });
+    const s = await f.req('POST', '/api/visitor/stamps', { cookie: visitor, body: { payload: `MARUGOTO2026:STAMP:${tokens[i]}`, cellIndex: i } });
     assert.equal(s.status, 200, JSON.stringify(s.json));
   }
+  const wrongCell = await f.req('POST', '/api/visitor/stamps', { cookie: visitor, body: { payload: `MARUGOTO2026:STAMP:${tokens[5]}`, cellIndex: 4 } });
+  assert.equal(wrongCell.status, 422);
+  assert.match(wrongCell.json.message, /⑥のマス用/);
   const dup = await f.req('POST', '/api/visitor/stamps', { cookie: visitor, body: { payload: `MARUGOTO2026:STAMP:${tokens[0]}` } });
   assert.equal(dup.json.error, 'ALREADY_STAMPED');
   const bad = await f.req('POST', '/api/visitor/stamps', { cookie: visitor, body: { payload: 'MARUGOTO2026:STAMP:unknowntokenxxxxxxxxxxx' } });

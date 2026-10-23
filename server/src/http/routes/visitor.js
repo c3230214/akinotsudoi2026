@@ -42,13 +42,13 @@ export function visitorRoutes(app, { cards, maps, surveys, config }) {
   });
 
   app.post('/api/visitor/stamps', {
-    schema: { body: { type: 'object', required: ['payload'], properties: { payload: { type: 'string', maxLength: 400 } } } },
+    schema: { body: { type: 'object', required: ['payload'], properties: { payload: { type: 'string', maxLength: 400 }, cellIndex: { type: 'integer', minimum: 0, maximum: 8 } } } },
   }, async (request) => {
     const card = requireCard(request);
     if (!stampByIp.hit(clientIp(request)).allowed || !stampByCard.hit(card.id).allowed) {
       throw new DomainError('RATE_LIMITED', '読み取りが多すぎます。少し待ってからお試しください', { status: 429 });
     }
-    const stamped = cards.stamp(card, request.body.payload);
+    const stamped = cards.stamp(card, request.body.payload, request.body.cellIndex ?? null);
     return { stamped, card: cards.getCardView(cards.cardFromToken(request.cookies[COOKIES.visitor])) };
   });
 

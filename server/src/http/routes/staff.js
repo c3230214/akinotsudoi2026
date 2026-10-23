@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import QRCode from 'qrcode';
 import { DomainError } from '../../domain/errors.js';
 import { listActionLog } from '../../db/repos/drawRepo.js';
 import { COOKIES, clientIp, cookieOptions } from '../security.js';
@@ -158,6 +159,13 @@ export function staffRoutes(app, { auth, draw, cards, devices, surveys, db }) {
     const session = s.sessions[id];
     if (!session?.voucher) throw new DomainError('UNKNOWN_VOUCHER', `券番号 ${id} は発行されていません`, { status: 404 });
     return { number: id, machineId: session.machineId, finalizedAt: session.finalizedAt, ...session.voucher, jobs: undefined, printStatus: session.voucher.printStatus };
+  });
+
+  app.get('/api/staff/vouchers/:number/qr.svg', { preHandler: requireStaff(auth, 'admin', 'printer', 'operator') }, async (request, reply) => {
+    const id = String(request.params.number).toUpperCase();
+    if (!/^BM-\d{4,6}$/.test(id) || !draw.getState().sessions[id]?.voucher) throw new DomainError('UNKNOWN_VOUCHER', '券番号が見つかりません', { status: 404 });
+    const svg = await QRCode.toString(`MARUGOTO2026:VOUCHER:${id}`, { type: 'svg', errorCorrectionLevel: 'M', margin: 1 });
+    return reply.type('image/svg+xml; charset=utf-8').header('Cache-Control', 'private, max-age=3600').send(svg);
   });
 
   app.get('/api/staff/images/:imageId', { preHandler: requireStaff(auth, ...OPS) }, async (request, reply) => {

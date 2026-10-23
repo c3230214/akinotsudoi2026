@@ -1,0 +1,24 @@
+{
+  "_comment": "SAMPLE ONLY. Names, positions and programmes below are placeholders for screen testing and are NOT the official venue layout. Replace with the organisers' data before the event (docs/map-data.md).",
+  "venue": { "name": "大垣城ホール", "width": 40, "depth": 28, "note": "サンプル配置（正式な会場図ではありません）" },
+  "places": [
+    { "id": "stage", "kind": "stage", "name": "ステージ", "x": 6, "y": 1, "w": 28, "d": 4, "h": 1.2, "description": "サンプルの説明文です。" },
+    { "id": "seats", "kind": "area", "name": "客席エリア（サンプル）", "shortName": "客席", "x": 9, "y": 6.5, "w": 22, "d": 4, "h": 0 },
+    { "id": "s-a1", "kind": "booth", "name": "サンプルブースA1 とても長いブース名の表示確認用テキスト", "shortName": "A1", "category": "実行委員会企画", "x": 4, "y": 13, "w": 4, "d": 3, "h": 1, "organizer": "サンプル団体", "description": "長い紹介文の折り返しを確認するためのサンプル文です。スマホ幅でも横にはみ出さず読めることを確認してください。", "details": { "hours": "サンプル 10:00〜12:00", "fee": "サンプル" } },
+    { "id": "s-a2", "kind": "booth", "name": "サンプルブースA2", "shortName": "A2", "category": "実行委員会企画", "x": 10, "y": 13, "w": 4, "d": 3, "h": 1 },
+    { "id": "s-a3", "kind": "booth", "name": "サンプルブースA3", "shortName": "A3", "category": "体験工房", "x": 16, "y": 13, "w": 4, "d": 3, "h": 1 },
+    { "id": "s-a4", "kind": "booth", "name": "サンプルブースA4", "shortName": "A4", "category": "体験工房", "x": 22, "y": 13, "w": 4, "d": 3, "h": 1 },
+    { "id": "s-a5", "kind": "booth", "name": "サンプルブースA5", "shortName": "A5", "category": "体験工房", "x": 28, "y": 13, "w": 4, "d": 3, "h": 1 },
+    { "id": "s-b1", "kind": "booth", "name": "サンプルブースB1", "shortName": "B1", "category": "パネル展示", "x": 4, "y": 18, "w": 4, "d": 3, "h": 1 },
+    { "id": "s-b2", "kind": "booth", "name": "サンプルブースB2", "shortName": "B2", "category": "実行委員会企画", "x": 10, "y": 18, "w": 4, "d": 3, "h": 1 },
+    { "id": "s-b3", "kind": "booth", "name": "サンプルブースB3", "shortName": "B3", "category": "体験工房", "x": 16, "y": 18, "w": 4, "d": 3, "h": 1 },
+    { "id": "s-b4", "kind": "booth", "name": "サンプルブースB4", "shortName": "B4", "category": "パネル展示", "x": 22, "y": 18, "w": 4, "d": 3, "h": 1 },
+    { "id": "s-f1", "kind": "facility", "name": "サンプル施設1", "shortName": "施設1", "x": 4, "y": 24, "w": 6, "d": 2.5, "h": 1.4 },
+    { "id": "s-f2", "kind": "facility", "name": "サンプル施設2", "shortName": "施設2", "x": 28, "y": 24, "w": 6, "d": 2.5, "h": 1.4 },
+    { "id": "s-entry", "kind": "facility", "name": "サンプル入口", "shortName": "入口", "x": 17, "y": 26.5, "w": 6, "d": 1.2, "h": 0.4 }
+  ],
+  "programs": [
+    { "id": "sample-1", "stageId": "stage", "title": "サンプル演目1（表示確認用）", "organizer": "サンプル", "startsAt": "2026-11-01T10:00+09:00", "endsAt": "2026-11-01T10:30+09:00" },
+    { "id": "sample-2", "stageId": "stage", "title": "サンプル演目2（表示確認用）", "startsAt": "2026-11-01T11:00+09:00" }
+  ]
+}

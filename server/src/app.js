@@ -79,9 +79,9 @@ export function buildApp({ config, db = null, clock = nowJst, logger = false, se
       list: false,
       dotfiles: 'deny',
       redirect: true,
-      setHeaders(res, filePath) {
+      setHeaders(reply, filePath) {
         // Small no-build app: always revalidate so a deploy is picked up at once.
-        res.setHeader('Cache-Control', /\.(png|jpe?g|svg|woff2?)$/.test(filePath) ? 'public, max-age=3600' : 'no-cache');
+        reply.header('Cache-Control', /\.(png|jpe?g|svg|woff2?)$/.test(filePath) ? 'public, max-age=3600' : 'no-cache');
       },
     });
     const jsqr = require_.resolve('jsqr/dist/jsQR.js');

@@ -43,7 +43,8 @@ export function createCardService({ db, clock, draw, claimSecret, bus }) {
     return { ...view, qrPayload: card.usedAt ? null : cardPayload(card.id, cardClaim(claimSecret, card.id)) };
   }
 
-  function stamp(card, payloadText) {
+  function stamp(card, payloadText, chosenCell = null) {
+    if (chosenCell !== null && !(Number.isInteger(chosenCell) && chosenCell >= 0 && chosenCell < CELLS.length)) invalid('cellIndex must be 0..8');
     const { token } = parseStampPayload(payloadText);
     const at = clock();
     const result = tx(db, () => {
@@ -53,7 +54,7 @@ export function createCardService({ db, clock, draw, claimSecret, bus }) {
       if (fresh.usedAt) fail('CARD_USED', 'このカードは抽選済みのため、スタンプを追加できません');
       if (hasStampFromPoint(db, card.id, point.id)) fail('ALREADY_STAMPED', `「${point.name}」のスタンプは取得済みです`);
       const marks = marksFromStamps(listStamps(db, card.id), { centerMarked: centerMarked() });
-      const cell = cellForPoint(point, marks);
+      const cell = cellForPoint(point, marks, chosenCell);
       if (cell === null) fail('CELL_ALREADY_MARKED', 'このマスはすでに達成しています');
       insertStamp(db, { cardId: card.id, cellIndex: cell, pointId: point.id, at, actor: 'visitor-qr' });
       return { cellIndex: cell, cellNumber: CELLS[cell].number, pointName: point.name };

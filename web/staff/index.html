@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>スタッフ画面｜まるごと体験ビンゴ</title>
+  <link rel="stylesheet" href="/shared/base.css">
+  <link rel="stylesheet" href="/staff/staff.css">
+  <script type="module" src="/staff/main.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <strong class="brand">まるごと体験ビンゴ スタッフ</strong>
+    <span id="conn" class="conn" role="status" aria-live="polite"></span>
+    <span id="who" class="who"></span>
+  </header>
+  <nav id="tabs" class="stabs" aria-label="スタッフ機能" hidden></nav>
+  <main id="app"><p>読み込み中…</p></main>
+  <dialog id="prompt-dlg" aria-labelledby="prompt-title">
+    <form method="dialog" class="sheet stack" id="prompt-form">
+      <h2 id="prompt-title"></h2>
+      <p id="prompt-text" class="muted"></p>
+      <label for="prompt-input" id="prompt-label">理由</label>
+      <textarea id="prompt-input" maxlength="500" required></textarea>
+      <div class="row">
+        <button type="submit" class="btn" value="ok">決定</button>
+        <button type="button" class="btn btn-plain" id="prompt-cancel">やめる</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

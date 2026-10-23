@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e8643c">
+  <title>まるごと体験ビンゴ｜秋のつどい</title>
+  <link rel="stylesheet" href="/shared/base.css">
+  <link rel="stylesheet" href="/visitor/visitor.css">
+  <script type="module" src="/visitor/main.js"></script>
+</head>
+<body>
+  <nav class="tabs" aria-label="画面の切り替え">
+    <a href="#card" data-route="card">カード</a>
+    <a href="#map" data-route="map">マップ</a>
+    <a href="#survey" data-route="survey">アンケート</a>
+  </nav>
+  <main id="main">
+    <section id="view-card" class="view" data-view="card"><p class="loading">読み込み中…</p></section>
+    <section id="view-map" class="view view-map" data-view="map" hidden>
+      <h1 class="sr-only">会場マップ</h1>
+      <div id="map-root" class="map-root"></div>
+      <div class="map-controls" role="toolbar" aria-label="マップ操作">
+        <button type="button" class="map-btn" data-map="in" aria-label="拡大">＋<span class="map-btn-text">拡大</span></button>
+        <button type="button" class="map-btn" data-map="out" aria-label="縮小">－<span class="map-btn-text">縮小</span></button>
+        <button type="button" class="map-btn" data-map="fit" aria-label="会場全体を表示">⌂<span class="map-btn-text">全体</span></button>
+        <button type="button" class="map-btn" data-map="list" aria-label="ブース一覧を開く">☰<span class="map-btn-text">一覧</span></button>
+      </div>
+      <p class="map-hint" id="map-hint">ブース・ステージをタップすると詳細</p>
+    </section>
+    <section id="view-survey" class="view" data-view="survey" hidden></section>
+  </main>
+  <dialog id="detail" aria-labelledby="detail-title">
+    <div class="sheet">
+      <div class="sheet-head">
+        <h2 id="detail-title"></h2>
+        <button type="button" class="btn btn-plain btn-small" data-close>閉じる</button>
+      </div>
+      <div id="detail-body" class="sheet-body"></div>
+    </div>
+  </dialog>
+</body>
+</html>
