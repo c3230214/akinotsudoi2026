@@ -1,28 +1,21 @@
-import Fastify from 'fastify';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { loadConfig } from './config.js';
+import { buildApp } from './app.js';
 
-/** Build an app instance so HTTP tests can inject and close it. */
-export function buildApp({ logger = false } = {}) {
-  const app = Fastify({ logger });
-
-  app.get('/health', async () => ({
-    status: 'ok',
-    service: 'marugoto-bingo',
-    stage: 'scaffold',
-  }));
-
-  app.setNotFoundHandler(async (_request, reply) => {
-    return reply.code(404).send({ error: 'NOT_FOUND' });
-  });
-
-  return app;
-}
-
-export async function start() {
-  const config = loadConfig();
-  const app = buildApp({ logger: true });
+export async function start(env = process.env) {
+  const config = loadConfig(env);
+  const app = buildApp({ config, logger: { level: config.nodeEnv === 'production' ? 'info' : 'debug', redact: ['req.headers.authorization', 'req.headers.cookie'] } });
+  const shutdown = async (signal) => {
+    app.log.info({ signal }, 'shutting down');
+    try {
+      await app.close();
+    } finally {
+      process.exit(0);
+    }
+  };
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
   await app.listen({ host: config.host, port: config.port });
   return app;
 }

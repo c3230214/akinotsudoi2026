@@ -5,15 +5,19 @@
   "type": "module",
   "description": "Starter server for the Marugoto Experience Bingo event system",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "node --watch src/main.js",
-    "start": "node src/main.js",
-    "test": "node --test",
-    "test:watch": "node --test --watch"
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/main.js",
+    "start": "node --disable-warning=ExperimentalWarning src/main.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js",
+    "test:watch": "node --disable-warning=ExperimentalWarning --test --watch test/*.test.js"
   },
   "dependencies": {
-    "fastify": "^5.0.0"
+    "@fastify/cookie": "11.1.3",
+    "@fastify/static": "10.1.7",
+    "fastify": "5.12.7",
+    "jsqr": "1.4.0",
+    "qrcode": "1.5.4"
   }
 }
