@@ -57,3 +57,12 @@ export function upsertStampPoint(db, { id, name, cellIndex = null, category = nu
 export function cardStats(db) {
   return db.prepare(`SELECT kind, COUNT(*) AS total, SUM(used_at IS NOT NULL) AS used FROM cards GROUP BY kind`).all();
 }
+
+export function deactivateStampPointsForCells(db, cellIndexes) {
+  for (const i of cellIndexes) db.prepare("UPDATE stamp_points SET active = 0 WHERE cell_index = ? AND token_hash NOT LIKE 'tap-only:%'").run(i);
+}
+
+export function findTapPoint(db, cellIndex) {
+  const r = db.prepare("SELECT * FROM stamp_points WHERE cell_index = ? AND token_hash LIKE 'tap-only:%' AND active = 1").get(cellIndex);
+  return r ? { id: r.point_id, name: r.name, cellIndex: r.cell_index } : null;
+}

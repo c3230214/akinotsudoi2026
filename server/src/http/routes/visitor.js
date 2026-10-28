@@ -52,16 +52,25 @@ export function visitorRoutes(app, { cards, maps, surveys, notices, config }) {
     return { stamped, card: cards.getCardView(cards.cardFromToken(request.cookies[COOKIES.visitor])) };
   });
 
+  app.post('/api/visitor/tap', {
+    schema: { body: { type: 'object', required: ['cellIndex'], properties: { cellIndex: { type: 'integer', minimum: 0, maximum: 8 } } } },
+  }, async (request) => {
+    const card = requireCard(request);
+    if (!stampByCard.hit(card.id).allowed) throw new DomainError('RATE_LIMITED', '操作が多すぎます。少し待ってからお試しください', { status: 429 });
+    const stamped = cards.tapCell(card, request.body.cellIndex);
+    return { stamped, card: cards.getCardView(cards.cardFromToken(request.cookies[COOKIES.visitor])) };
+  });
+
   app.get('/api/visitor/survey', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     const card = currentCard(request);
     const cfg = surveys.getConfig();
     const answered = card ? surveys.find(card.id) : null;
-    return { enabled: cfg.enabled, ageGroups: cfg.ageGroups, consentText: cfg.consentText, commentLabel: cfg.commentLabel, giftEnabled: cfg.giftEnabled, answered: Boolean(answered), answeredAt: answered?.answeredAt ?? null, giftAt: answered?.giftAt ?? null, hasCard: Boolean(card) };
+    return { enabled: cfg.enabled, ageGroups: cfg.ageGroups, genders: cfg.genders, satisfaction: cfg.satisfaction, consentText: cfg.consentText, commentLabel: cfg.commentLabel, giftEnabled: cfg.giftEnabled, answered: Boolean(answered), answeredAt: answered?.answeredAt ?? null, giftAt: answered?.giftAt ?? null, hasCard: Boolean(card) };
   });
 
   app.post('/api/visitor/survey', {
-    schema: { body: { type: 'object', properties: { ageGroup: { type: 'string', maxLength: 40 }, comment: { type: 'string', maxLength: 1000 }, consent: { type: 'boolean' } } } },
+    schema: { body: { type: 'object', properties: { ageGroup: { type: 'string', maxLength: 40 }, gender: { type: 'string', maxLength: 40 }, satisfaction: { type: 'integer', minimum: 1, maximum: 5 }, comment: { type: 'string', maxLength: 1000 }, consent: { type: 'boolean' } } } },
   }, async (request) => {
     const card = requireCard(request);
     return surveys.submit(card.id, request.body);

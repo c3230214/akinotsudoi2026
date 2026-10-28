@@ -5,6 +5,8 @@ import { invalid } from '../errors.js';
 // TODO(DECISION-C21): the prefix is fixed to this event; a later event needs its own.
 export const QR_PREFIX = 'MARUGOTO2026';
 const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
+/** Cells achieved by tapping, with no stamp QR (2026-10-28: ⑤ ビンゴに参加しよう). */
+export const TAP_CELLS = Object.freeze([4]);
 const TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
 const CARD_ID_RE = /^D[0-9A-HJKMNP-TV-Z]{8}$/;
 

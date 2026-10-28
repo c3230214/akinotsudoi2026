@@ -1,4 +1,5 @@
-// Create (or import) the nine stamp QR codes, one per card cell ①〜⑨, and
+// Create (or import) the stamp QR codes, one per card cell except ⑤ (tap to
+// achieve, no QR), and
 // write printable SVG/PNG files plus an A4 print sheet.
 //
 //   node --env-file=<env> scripts/generateStampQr.js --out ../stamp-qr           # new tokens
@@ -11,9 +12,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import QRCode from 'qrcode';
 import { CELLS } from '../src/domain/card/cardLayout.js';
-import { stampPayload } from '../src/domain/card/cardModel.js';
+import { TAP_CELLS, stampPayload } from '../src/domain/card/cardModel.js';
 import { randomToken, sha256 } from '../src/services/secrets.js';
-import { upsertStampPoint } from '../src/db/repos/cardRepo.js';
+import { deactivateStampPointsForCells, upsertStampPoint } from '../src/db/repos/cardRepo.js';
 import { tx } from '../src/db/connection.js';
 import { nowJst } from '../src/time.js';
 import { arg, die, openFromEnv } from './lib.js';
@@ -28,7 +29,7 @@ const noDb = arg('no-db', false) === true;
 let points;
 if (importPath && importPath !== true) {
   const data = JSON.parse(fs.readFileSync(importPath, 'utf8'));
-  if (!Array.isArray(data.points) || data.points.length !== 9) die('stamp-tokens.json must contain 9 points');
+  if (!Array.isArray(data.points) || data.points.length < 8) die('stamp-tokens.json must contain the stamp points');
   points = data.points;
 } else {
   points = CELLS.map((c) => ({
@@ -37,6 +38,11 @@ if (importPath && importPath !== true) {
     name: `${CIRCLED[c.index]} ${c.label}`,
     token: randomToken(24),
   }));
+}
+// Older token files also hold ⑤; it is achieved by tapping now, so drop it.
+points = points.filter((p) => !TAP_CELLS.includes(p.cellIndex));
+for (const f of fs.existsSync(outDir) ? fs.readdirSync(outDir) : []) {
+  if (TAP_CELLS.some((i) => f.startsWith(`stamp-${String(i + 1).padStart(2, '0')}.`))) fs.unlinkSync(path.join(outDir, f));
 }
 for (const p of points) {
   if (!Number.isInteger(p.cellIndex) || p.cellIndex < 0 || p.cellIndex > 8) die(`bad cellIndex for ${p.pointId}`);
@@ -80,6 +86,7 @@ if (!noDb) {
   const at = nowJst();
   tx(db, () => {
     for (const p of points) upsertStampPoint(db, { id: p.pointId, name: p.name, cellIndex: p.cellIndex, tokenHash: sha256(p.token), at });
+    deactivateStampPointsForCells(db, TAP_CELLS);
   });
   db.close();
   console.log(`registered ${points.length} stamp points in the database`);

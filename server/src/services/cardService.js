@@ -1,11 +1,11 @@
 import { tx } from '../db/connection.js';
 import {
-  findCardById, findCardByTokenHash, findStampPointByTokenHash, hasStampFromPoint, insertCard, insertStamp,
+  findCardById, findCardByTokenHash, findStampPointByTokenHash, findTapPoint, hasStampFromPoint, insertCard, insertStamp,
   listStamps, markCardUsed,
 } from '../db/repos/cardRepo.js';
 import { closeCardRead, findCardRead } from '../db/repos/deviceRepo.js';
 import { fail, invalid } from '../domain/errors.js';
-import { cardPayload, cellForPoint, isCardId, marksFromStamps, parseCardPayload, parseStampPayload, toCardView } from '../domain/card/cardModel.js';
+import { TAP_CELLS, cardPayload, cellForPoint, isCardId, marksFromStamps, parseCardPayload, parseStampPayload, toCardView } from '../domain/card/cardModel.js';
 import { CELLS } from '../domain/card/cardLayout.js';
 import { validateMarks } from '../domain/rules.js';
 import { cardClaim, newCardId, randomToken, safeEqual, sha256 } from './secrets.js';
@@ -60,6 +60,22 @@ export function createCardService({ db, clock, draw, claimSecret, bus }) {
       return { cellIndex: cell, cellNumber: CELLS[cell].number, pointName: point.name };
     });
     return result;
+  }
+
+  /** Cells without a QR (⑤) are achieved by the visitor's tap (2026-10-28 request). */
+  function tapCell(card, cellIndex) {
+    if (!TAP_CELLS.includes(cellIndex)) invalid('このマスはブースのQRコードを読み取って達成します');
+    const at = clock();
+    return tx(db, () => {
+      const point = findTapPoint(db, cellIndex);
+      if (!point) fail('UNKNOWN_STAMP', 'このマスは準備中です', { status: 404 });
+      const fresh = findCardById(db, card.id);
+      if (fresh.usedAt) fail('CARD_USED', 'このカードは抽選済みのため、スタンプを追加できません');
+      const marks = marksFromStamps(listStamps(db, card.id), { centerMarked: centerMarked() });
+      if (marks[cellIndex]) fail('CELL_ALREADY_MARKED', 'このマスはすでに達成しています');
+      insertStamp(db, { cardId: card.id, cellIndex, pointId: point.id, at, actor: 'visitor-tap' });
+      return { cellIndex, cellNumber: CELLS[cellIndex].number, pointName: point.name };
+    });
   }
 
   function verifyDigital(payloadText) {
@@ -163,5 +179,5 @@ export function createCardService({ db, clock, draw, claimSecret, bus }) {
     return { cardId: card.id, used: view.used, usedAt: card.usedAt, usedSessionId: card.usedSessionId, marks: view.marks, lines: view.lines, draws: view.draws };
   }
 
-  return { issueCard, cardFromToken, getCardView, stamp, acceptDigital, acceptPaper, dismissRead, verifyDigital, lookupForStaff, isCardId };
+  return { issueCard, cardFromToken, getCardView, stamp, tapCell, acceptDigital, acceptPaper, dismissRead, verifyDigital, lookupForStaff, isCardId };
 }

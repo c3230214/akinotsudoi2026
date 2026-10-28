@@ -650,6 +650,14 @@ async function act(name, id, el) {
   }
 }
 
+function surveyTable(sum) {
+  const head = html`<tr><th>区分</th><th class="num">回答数</th><th class="num">満足度平均</th>${sum.satisfaction.labels.map((x) => html`<th class="num">${x.code} ${x.label}</th>`)}</tr>`;
+  const row = (r) => html`<tr><td>${r.label}</td><td class="num">${r.count}</td><td class="num">${r.mean ?? '－'}</td>${sum.satisfaction.labels.map((x) => html`<td class="num">${r.distribution[x.code]}</td>`)}</tr>`;
+  return html`<div class="table-wrap"><table><thead>${head}</thead><tbody>
+    ${row({ label: '全体', count: sum.total, mean: sum.satisfaction.mean, distribution: sum.satisfaction.distribution })}
+    ${sum.byAge.map(row)}${sum.byGender.map(row)}</tbody></table></div>`;
+}
+
 async function lookupVoucher(text) {
   try {
     st.redeem = await getJson(`/api/staff/vouchers/${encodeURIComponent(String(text).trim().toUpperCase())}`);
@@ -746,18 +754,20 @@ async function adminAct(name) {
     case 'loadSurvey': {
       try {
         const [cfg, sum] = await Promise.all([getJson('/api/admin/survey-config'), getJson('/api/admin/surveys/summary')]);
-        render(pane(), html`<h3>アンケート設定</h3><p class="notice">設問・年齢区分・同意文・お礼は未決定事項（DECISION-C16）です。運営が決めた内容だけを入力してください。</p>
+        render(pane(), html`<h3>アンケート設定</h3><p class="notice">年代、性別、満足度（5段階）を数値で集計します。選択肢と同意文の初期値は提案です（DECISION-C16）。回答が集まってから選択肢を変えると集計がずれるので、開場前に確定してください。</p>
           <label class="check"><input type="checkbox" id="sv-enabled" ${cfg.enabled ? raw('checked') : ''}> 公開する</label>
-          <label for="sv-ages">年齢区分（1行に1つ）</label><textarea id="sv-ages">${cfg.ageGroups.join('\n')}</textarea>
+          <label for="sv-ages">年代（1行に1つ）</label><textarea id="sv-ages">${cfg.ageGroups.join('\n')}</textarea>
+          <label for="sv-genders">性別（1行に1つ）</label><textarea id="sv-genders">${cfg.genders.join('\n')}</textarea>
           <label for="sv-comment">自由記述の見出し</label><input id="sv-comment" value="${cfg.commentLabel}">
           <label for="sv-consent">同意文</label><textarea id="sv-consent">${cfg.consentText}</textarea>
           <label class="check"><input type="checkbox" id="sv-gift" ${cfg.giftEnabled ? raw('checked') : ''}> 回答者へのお礼を記録する</label>
           <button class="btn" id="sv-save">保存</button>
-          <h3>集計</h3><p>回答 ${sum.total} 件、お礼 ${sum.gifts} 件</p>
-          <ul class="plain">${Object.entries(sum.byAge).map(([k, n]) => html`<li>${k}：${n}</li>`)}</ul>`);
+          <h3>集計（回答 ${sum.total} 件、満足度の平均 ${sum.satisfaction.mean ?? '－'}）</h3>
+          ${surveyTable(sum)}
+          <p><a class="btn btn-plain btn-small" href="/api/admin/export/surveys.csv">アンケートCSV（コード付き）</a></p>`);
         $('#sv-save').addEventListener('click', async () => {
           try {
-            await api('PUT', '/api/admin/survey-config', { enabled: $('#sv-enabled').checked, ageGroups: $('#sv-ages').value.split('\n'), commentLabel: $('#sv-comment').value, consentText: $('#sv-consent').value, giftEnabled: $('#sv-gift').checked });
+            await api('PUT', '/api/admin/survey-config', { enabled: $('#sv-enabled').checked, ageGroups: $('#sv-ages').value.split('\n'), genders: $('#sv-genders').value.split('\n'), commentLabel: $('#sv-comment').value, consentText: $('#sv-consent').value, giftEnabled: $('#sv-gift').checked });
             toast('保存しました', { kind: 'ok' });
           } catch (error) { showError(error); }
         });

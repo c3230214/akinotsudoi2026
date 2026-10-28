@@ -1,7 +1,7 @@
 import { getJson, postJson } from '../shared/api.js';
 import { $, $$, fmtTime, html, render, toast } from '../shared/html.js';
 import { scanQr } from '../shared/scanner.js';
-import { CIRCLED, renderCardFace } from './card.js';
+import { CIRCLED, TAP_CELLS, renderCardFace } from './card.js';
 import { KIND_LABELS, mountMap } from './map3d.js';
 
 // Every visitor screen fits one phone screen: the card is scaled to the
@@ -46,12 +46,6 @@ async function loadCard() {
   renderCard();
 }
 
-function statusText(c) {
-  if (c.used) return html`<strong>抽選済み</strong>（${fmtTime(c.usedAt)}）`;
-  if (c.draws === 0) return html`ラインがそろうと抽選できます`;
-  return html`<span class="big">${c.lines}</span>ライン達成 ／ <span class="big">${c.draws}</span>回 抽選できるよ！`;
-}
-
 function renderCard() {
   const root = $('#view-card');
   if (state.noCard) {
@@ -69,17 +63,27 @@ function renderCard() {
   if (!c) return;
   render(root, html`
     <div class="card-fit">${renderCardFace(c)}</div>
-    <div class="card-bar">
-      <p class="status-line" role="status">${statusText(c)}</p>
-      ${c.used ? '' : html`<p class="tap-hint">体験したらマスをタップしてブースのQRを読み取ろう</p>`}
-      <p class="rule">1〜2ライン：1回／3〜7：2回／全8：3回　抽選は一度だけ</p>
-      <div class="bar-buttons">
-        <button type="button" class="btn btn-secondary" id="show-qr" ${c.used || c.draws === 0 ? 'disabled' : ''}>受付用QRを表示</button>
-      </div>
-      <a class="admin-link" href="/admin/">管理</a>
-    </div>`);
+    ${c.draws > 0 && !c.used ? html`<div class="card-bar"><button type="button" class="btn btn-secondary btn-block" id="show-qr">受付用QRを表示</button></div>` : ''}`);
   for (const b of $$('[data-cell]', root)) b.addEventListener('click', () => openCell(Number(b.dataset.cell)));
-  $('#show-qr').addEventListener('click', showQr);
+  $('#show-qr')?.addEventListener('click', showQr);
+}
+
+// ---------- おがっきぃ cheer ----------
+let cheerTimer = 0;
+function cheer(kind) {
+  const dlg = $('#cheer');
+  $('#cheer-img').src = `/assets/ogakky-${kind}.webp`;
+  $('#cheer-img').alt = { goodjob: 'Good Job', champion: 'Champion', fantastic: 'Fantastic' }[kind];
+  if (!dlg.open) dlg.show();
+  clearTimeout(cheerTimer);
+  cheerTimer = setTimeout(() => dlg.close(), 1800);
+}
+
+function celebrate(before, after, cellIndex) {
+  if (after.marks.every(Boolean)) cheer('fantastic');
+  else if (before.lines === 0 && after.lines > 0) cheer('champion');
+  else cheer('goodjob');
+  toast(`${CIRCLED[cellIndex]} を達成しました！`, { kind: 'ok', ms: 3000 });
 }
 
 function showQr() {
@@ -118,6 +122,10 @@ function openCell(index) {
     openSheet(title, html`<div class="cell-sheet"><p class="notice">抽選済みのカードには追加できません。</p></div>`);
     return;
   }
+  if (TAP_CELLS.includes(index)) {
+    tapCell(index);
+    return;
+  }
   openSheet(title, html`<div class="cell-sheet stack">
     <p>体験したブースに掲示されている「${CIRCLED[index]}」のスタンプ用QRコードを読み取ると、このマスが達成になります。</p>
     <button type="button" class="btn" id="cell-scan">QRコードを読み取る</button>
@@ -128,7 +136,20 @@ function openCell(index) {
   });
 }
 
+async function tapCell(cellIndex) {
+  const before = state.card;
+  try {
+    const out = await postJson('/api/visitor/tap', { cellIndex });
+    state.card = out.card;
+    renderCard();
+    celebrate(before, out.card, cellIndex);
+  } catch (error) {
+    toast(error.message, { kind: 'error', ms: 5000 });
+  }
+}
+
 async function scanStamp(cellIndex) {
+  const before = state.card;
   const text = await scanQr({ title: `${CIRCLED[cellIndex]} のQRコードを読み取る`, hint: 'ブースのスタンプ用QRコードを枠に写してください' });
   if (!text) return;
   try {
@@ -136,7 +157,7 @@ async function scanStamp(cellIndex) {
     state.card = out.card;
     state.qrBust += 1;
     renderCard();
-    toast(`${CIRCLED[out.stamped.cellIndex]} を達成しました！`, { kind: 'ok', ms: 4500 });
+    celebrate(before, out.card, out.stamped.cellIndex);
   } catch (error) {
     toast(error.message, { kind: 'error', ms: 5000 });
   }
@@ -236,23 +257,26 @@ async function loadSurvey() {
     return render(root, html`${title}<p class="notice notice-ok">ご回答ありがとうございました（${fmtTime(s.answeredAt)}）。</p>
       ${s.giftEnabled ? html`<p>${s.giftAt ? 'お礼はお渡し済みです。' : '景品交換所でカードのQRを見せるとお礼を受け取れます。'}</p>` : ''}`);
   }
+  const radios = (name, list) => list.map((label) => html`<label class="chip-opt"><input type="radio" name="${name}" value="${label}" required><span>${label}</span></label>`);
   render(root, html`
     ${title}
     <form id="survey-form" class="survey">
-      <fieldset class="ages">
-        <legend>年齢区分（必須）</legend>
-        ${s.ageGroups.map((g) => html`<label class="radio"><input type="radio" name="ageGroup" value="${g}" required> ${g}</label>`)}
-      </fieldset>
-      <label for="comment">${s.commentLabel}（任意・名前は書かないでください）</label>
-      <textarea id="comment" name="comment" maxlength="1000" rows="3"></textarea>
-      <label class="radio"><input type="checkbox" name="consent" required> ${s.consentText}</label>
+      <fieldset><legend>年代</legend><div class="opts opts-4">${radios('ageGroup', s.ageGroups)}</div></fieldset>
+      <fieldset><legend>性別</legend><div class="opts opts-4">${radios('gender', s.genders)}</div></fieldset>
+      <fieldset><legend>満足度</legend><div class="opts opts-5">${s.satisfaction.map((x) => html`<label class="chip-opt sat"><input type="radio" name="satisfaction" value="${x.code}" required><span><b>${x.code}</b>${x.label}</span></label>`)}</div></fieldset>
+      <label for="comment" class="small-label">${s.commentLabel}（任意・名前は書かないでください）</label>
+      <textarea id="comment" name="comment" maxlength="1000" rows="2"></textarea>
+      <label class="consent"><input type="checkbox" name="consent" required> ${s.consentText}</label>
       <button type="submit" class="btn btn-block">送信する</button>
     </form>`);
   $('#survey-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
     try {
-      await postJson('/api/visitor/survey', { ageGroup: f.get('ageGroup'), comment: f.get('comment') ?? '', consent: f.get('consent') === 'on' });
+      await postJson('/api/visitor/survey', {
+        ageGroup: f.get('ageGroup'), gender: f.get('gender'), satisfaction: Number(f.get('satisfaction')),
+        comment: f.get('comment') ?? '', consent: f.get('consent') === 'on',
+      });
       toast('送信しました。ありがとうございました', { kind: 'ok' });
       loadSurvey();
     } catch (error) {
@@ -322,7 +346,22 @@ function showPop(n) {
   if (!dlg.open) dlg.showModal();
 }
 
+// ---------- header menu ----------
+function openMenu() {
+  const c = state.card;
+  openSheet('メニュー', html`<div class="stack menu">
+    ${c && !c.used && c.draws > 0 ? html`<button type="button" class="btn btn-secondary btn-block" id="menu-qr">受付用QRを表示</button>` : ''}
+    <a class="btn btn-plain btn-block" href="#map">会場マップ</a>
+    <a class="btn btn-plain btn-block" href="#survey">アンケート</a>
+    ${c ? html`<p class="muted small">カード番号 ${c.cardId}</p>` : ''}
+    <a class="admin-link" href="/admin/">管理</a>
+  </div>`);
+  $('#menu-qr')?.addEventListener('click', showQr);
+  for (const a of $$('#detail-body a[href^="#"]')) a.addEventListener('click', () => $('#detail').close());
+}
+
 // ---------- boot ----------
+$('#menu-btn').addEventListener('click', openMenu);
 $('[data-pop-close]').addEventListener('click', () => $('#pop').close());
 loadNotices();
 setInterval(checkNotices, 5_000);

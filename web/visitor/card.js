@@ -1,31 +1,46 @@
-// Digital bingo card. The organisers' card design (Canva PDF, 2026-10-28) is
-// shown as one image, so title, furigana, illustrations and the deadline box
-// match the paper card exactly. Transparent buttons sit on the nine cells;
-// tapping one offers a QR scan for that cell, never marks it by itself.
-// The image comes from assets/bingo-card.*, rasterised from the supplied PDF.
+// Digital bingo card in the layout approved by the city (2026-10-28):
+// title block on the left, おがっきぃ on the top right, 3x3 cells, a line
+// counter and the draw rule. Each cell shows the paper card's cell artwork
+// (assets/cell-N.webp, cut from the organisers' PDF), so wording, colours and
+// illustrations match the paper card. Tapping a cell opens its QR scan; ⑤
+// has no QR and is achieved by the tap itself.
 // TODO(DECISION-U04): confirm the illustrations' terms allow web distribution.
-import { html, raw } from '../shared/html.js';
+import { html } from '../shared/html.js';
 
 export const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
+export const TAP_CELLS = [4];
 
-const leaf = `<svg class="stamp-leaf" viewBox="-12 -12 24 24" aria-hidden="true" focusable="false"><path transform="rotate(-12)" fill="#d64a20" d="M0-10 L2.5-4 L8-6 L5.5 0 L10 3 L4 4 L5 10 L0 6 L-5 10 L-4 4 L-10 3 L-5.5 0 L-8-6 L-2.5-4Z"/></svg>`;
+function lineMessage(card) {
+  if (card.used) return html`<span class="lb-right is-used">抽選済み</span>`;
+  if (card.draws > 0) return html`<span class="lb-right"><b>${card.draws}回</b> 抽選できるよ！</span>`;
+  return html`<span class="lb-right">スタンプをあつめよう！</span>`;
+}
 
 export function renderCardFace(card) {
   const cells = card.cells.map((c) => html`
     <li class="cell-slot">
       <button type="button" class="cell${c.marked ? ' is-marked' : ''}" data-cell="${c.index}"
-        aria-label="${CIRCLED[c.index]} ${c.label}：${c.marked ? '体験済み' : 'まだ。タップしてQRコードを読み取る'}">
-        ${c.marked ? raw(`${leaf}<span class="cell-done" aria-hidden="true">体験済</span>`) : ''}
+        aria-label="${CIRCLED[c.index]} ${c.label}：${c.marked ? '体験済み' : TAP_CELLS.includes(c.index) ? 'まだ。タップすると達成' : 'まだ。タップしてQRコードを読み取る'}">
+        <img class="cell-art" src="/assets/cell-${c.index + 1}.webp" alt="" width="420" height="400" decoding="async">
+        ${c.marked ? html`<span class="cell-done" aria-hidden="true">体験済</span>` : ''}
       </button>
     </li>`);
   return html`
   <article class="bingo-card" aria-label="デジタルビンゴカード">
-    <picture>
-      <source srcset="/assets/bingo-card.webp" type="image/webp">
-      <img class="card-art" src="/assets/bingo-card.jpg" width="1200" height="1700"
-        alt="秋のつどい まるごと体験ビンゴ。11月1日（日）大垣城ホール。シール貼付は14時50分まで、景品交換は15時まで">
-    </picture>
-    <ol class="grid-hit">${cells}</ol>
-    ${card.used ? html`<p class="used-stamp">抽選済み</p>` : ''}
+    <div class="card-top">
+      <div class="card-titles">
+        <p class="ct-sub">あきのつどい 2026</p>
+        <h1 class="ct-title">まるごと体験ビンゴ</h1>
+        <p class="ct-pill"><span>11/1（日）当日のみ有効</span></p>
+        <p class="ct-hint">体験したらマスをタップしてQRを読み取ろう！</p>
+      </div>
+      <figure class="mascot">
+        <img src="/assets/ogakky.webp" alt="おがっきぃ" width="416" height="442">
+        <figcaption>大垣市マスコットキャラクター<br><b>おがっきぃ</b></figcaption>
+      </figure>
+    </div>
+    <ol class="grid">${cells}</ol>
+    <p class="line-bar"><span class="lb-left"><span class="lb-num">${card.lines}</span>ライン達成</span>${lineMessage(card)}</p>
+    <p class="rule">1〜2ライン：1回 ／ 3〜7：2回 ／ 全8：3回　抽選は一度だけ</p>
   </article>`;
 }

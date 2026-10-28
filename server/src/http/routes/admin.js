@@ -3,6 +3,7 @@ import { listActionLog } from '../../db/repos/drawRepo.js';
 import { cardStats, listStampPoints } from '../../db/repos/cardRepo.js';
 import { requireStaff, staffActor } from '../auth.js';
 import { ROLES } from '../../services/authService.js';
+import { SURVEY_CSV_HEADER } from '../../services/surveyService.js';
 
 function csvCell(v) {
   const s = v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
@@ -52,6 +53,7 @@ export function adminRoutes(app, { auth, draw, maps, surveys, notices, db }) {
   app.get('/api/admin/survey-config', { preHandler: admin }, async () => surveys.getConfig());
   app.put('/api/admin/survey-config', { preHandler: admin }, async (request) => surveys.setConfig(request.body, staffActor(request.staffAuth)));
   app.get('/api/admin/surveys/summary', { preHandler: admin }, async () => surveys.summary());
+  app.get('/api/admin/export/surveys.csv', { preHandler: admin }, async (_request, reply) => sendCsv(reply, 'surveys.csv', toCsv(SURVEY_CSV_HEADER, surveys.csvRows())));
 
   app.get('/api/admin/export/audit.csv', { preHandler: admin }, async (_request, reply) => sendCsv(reply, 'audit.csv', auditCsv(db)));
   app.get('/api/admin/export/sessions.csv', { preHandler: admin }, async (_request, reply) => sendCsv(reply, 'sessions.csv', sessionsCsv(draw.getState())));

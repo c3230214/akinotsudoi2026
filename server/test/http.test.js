@@ -355,3 +355,44 @@ test('管理パネルは資格情報が未設定なら無効（404）', async (t
   t.after(() => f.close());
   assert.equal((await f.req('GET', '/api/panel/summary', { origin: null })).status, 404);
 });
+
+test('⑤はタップで達成（QRなし）、他のマスはタップだけでは達成できない', async (t) => {
+  const f = await makeApp();
+  t.after(() => f.close());
+  const visitor = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
+  const tap = await f.req('POST', '/api/visitor/tap', { cookie: visitor, body: { cellIndex: 4 } });
+  assert.equal(tap.status, 200, JSON.stringify(tap.json));
+  assert.equal(tap.json.card.marks[4], true);
+  assert.equal((await f.req('POST', '/api/visitor/tap', { cookie: visitor, body: { cellIndex: 4 } })).json.error, 'CELL_ALREADY_MARKED');
+  assert.equal((await f.req('POST', '/api/visitor/tap', { cookie: visitor, body: { cellIndex: 0 } })).status, 422);
+  assert.equal((await f.req('POST', '/api/visitor/tap', { cookie: null, body: { cellIndex: 4 } })).status, 401);
+});
+
+test('アンケート：年代・性別・満足度をコードで保存し、集計とCSVに出す。1カード1回', async (t) => {
+  const f = await makeApp();
+  t.after(() => f.close());
+  const answer = async (body) => {
+    const v = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
+    return f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ...body } });
+  };
+  const cfg = (await f.req('GET', '/api/visitor/survey', { origin: null })).json;
+  assert.equal(cfg.enabled, true);
+  assert.deepEqual(cfg.satisfaction.map((x) => x.code), [5, 4, 3, 2, 1]);
+  assert.equal((await answer({ ageGroup: '30代', gender: '女性', satisfaction: 5 })).status, 200);
+  assert.equal((await answer({ ageGroup: '30代', gender: '男性', satisfaction: 4 })).status, 200);
+  assert.equal((await answer({ ageGroup: '10代', gender: '女性', satisfaction: 3 })).status, 200);
+  assert.equal((await answer({ ageGroup: '30代', gender: '女性', satisfaction: 9 })).status, 422);
+  assert.equal((await answer({ ageGroup: '130代', gender: '女性', satisfaction: 3 })).status, 422);
+  const admin = await f.staff('admin');
+  const sum = (await f.req('GET', '/api/admin/surveys/summary', { cookie: admin })).json;
+  assert.equal(sum.total, 3);
+  assert.equal(sum.satisfaction.mean, 4);
+  assert.equal(sum.byAge.find((r) => r.label === '30代').mean, 4.5);
+  assert.equal(sum.byGender.find((r) => r.label === '女性').count, 2);
+  const csv = (await f.req('GET', '/api/admin/export/surveys.csv', { cookie: admin })).res.body;
+  assert.match(csv, /"ageCode"/);
+  assert.match(csv, /"4","30代","2","女性","5","とても満足"/);
+  const v = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
+  await f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 3 } });
+  assert.equal((await f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 3 } })).json.error, 'ALREADY_ANSWERED');
+});

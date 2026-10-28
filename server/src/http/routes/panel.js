@@ -4,7 +4,8 @@ import { cardStats } from '../../db/repos/cardRepo.js';
 import { createRateLimiter } from '../../services/rateLimiter.js';
 import { safeEqual } from '../../services/secrets.js';
 import { clientIp } from '../security.js';
-import { auditCsv, sendCsv, sessionsCsv } from './admin.js';
+import { auditCsv, sendCsv, sessionsCsv, toCsv } from './admin.js';
+import { SURVEY_CSV_HEADER } from '../../services/surveyService.js';
 
 const REALM = 'Basic realm="marugoto-bingo admin", charset="UTF-8"';
 
@@ -64,7 +65,7 @@ export function panelRoutes(app, { draw, devices, surveys, db, clock }) {
       printQueue: v.printQueue.map((j) => ({ sessionId: j.sessionId, status: j.status, station: j.station ?? null })),
       recentSessions: v.recentSessions.slice(0, 20),
       cards: cardStats(db),
-      surveys: { total: surveys.summary().total },
+      surveys: surveys.summary(),
     };
   });
 
@@ -84,5 +85,6 @@ export function panelRoutes(app, { draw, devices, surveys, db, clock }) {
   });
 
   app.get('/api/panel/export/sessions.csv', async (_request, reply) => sendCsv(reply, 'sessions.csv', sessionsCsv(draw.getState())));
+  app.get('/api/panel/export/surveys.csv', async (_request, reply) => sendCsv(reply, 'surveys.csv', toCsv(SURVEY_CSV_HEADER, surveys.csvRows())));
   app.get('/api/panel/export/audit.csv', async (_request, reply) => sendCsv(reply, 'audit.csv', auditCsv(db)));
 }
