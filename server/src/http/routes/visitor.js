@@ -13,6 +13,13 @@ export function visitorRoutes(app, { cards, maps, surveys, notices, config }) {
   const stampByIp = createRateLimiter({ windowMs: 60_000, max: 240 });
   const stampByCard = createRateLimiter({ windowMs: 60_000, max: 20 });
 
+  // 2026-10-28: the intake QR is shown only after the survey is answered
+  // (while the survey is open). The claim is withheld server-side, not just hidden.
+  const cardView = (card) => {
+    const view = cards.getCardView(card);
+    const surveyRequired = surveys.getConfig().enabled && !surveys.find(card.id);
+    return { ...view, surveyRequired, qrPayload: surveyRequired ? null : view.qrPayload };
+  };
   const currentCard = (request) => cards.cardFromToken(request.cookies[COOKIES.visitor]);
   const requireCard = (request) => {
     const card = currentCard(request);
@@ -22,20 +29,21 @@ export function visitorRoutes(app, { cards, maps, surveys, notices, config }) {
 
   app.post('/api/visitor/cards', async (request, reply) => {
     const existing = currentCard(request);
-    if (existing) return { ...cards.getCardView(existing), issued: false };
+    if (existing) return { ...cardView(existing), issued: false };
     if (!issueByIp.hit(clientIp(request)).allowed) throw new DomainError('RATE_LIMITED', '短時間に多くのカードが発行されました。少し待ってからお試しください', { status: 429 });
     const { token, cardId } = cards.issueCard();
     reply.setCookie(COOKIES.visitor, token, cookieOptions(config, CARD_COOKIE_MAX_AGE));
-    return { ...cards.getCardView(cards.cardFromToken(token)), issued: true, cardId };
+    return { ...cardView(cards.cardFromToken(token)), issued: true, cardId };
   });
 
   app.get('/api/visitor/card', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
-    return cards.getCardView(requireCard(request));
+    return cardView(requireCard(request));
   });
 
   app.get('/api/visitor/card/qr.svg', async (request, reply) => {
-    const view = cards.getCardView(requireCard(request));
+    const view = cardView(requireCard(request));
+    if (view.surveyRequired && !view.used) throw new DomainError('SURVEY_REQUIRED', 'アンケートに答えると受付用QRを表示できます', { status: 403 });
     if (!view.qrPayload) throw new DomainError('CARD_USED', 'このカードは抽選済みです', { status: 410 });
     const svg = await QRCode.toString(view.qrPayload, { type: 'svg', errorCorrectionLevel: 'M', margin: 2 });
     return reply.header('Cache-Control', 'no-store').type('image/svg+xml; charset=utf-8').send(svg);
@@ -49,7 +57,7 @@ export function visitorRoutes(app, { cards, maps, surveys, notices, config }) {
       throw new DomainError('RATE_LIMITED', '読み取りが多すぎます。少し待ってからお試しください', { status: 429 });
     }
     const stamped = cards.stamp(card, request.body.payload, request.body.cellIndex ?? null);
-    return { stamped, card: cards.getCardView(cards.cardFromToken(request.cookies[COOKIES.visitor])) };
+    return { stamped, card: cardView(cards.cardFromToken(request.cookies[COOKIES.visitor])) };
   });
 
   app.post('/api/visitor/tap', {
@@ -58,7 +66,7 @@ export function visitorRoutes(app, { cards, maps, surveys, notices, config }) {
     const card = requireCard(request);
     if (!stampByCard.hit(card.id).allowed) throw new DomainError('RATE_LIMITED', '操作が多すぎます。少し待ってからお試しください', { status: 429 });
     const stamped = cards.tapCell(card, request.body.cellIndex);
-    return { stamped, card: cards.getCardView(cards.cardFromToken(request.cookies[COOKIES.visitor])) };
+    return { stamped, card: cardView(cards.cardFromToken(request.cookies[COOKIES.visitor])) };
   });
 
   app.get('/api/visitor/survey', async (request, reply) => {

@@ -92,3 +92,7 @@ export function listExpiredImages(db, nowIso) {
 export function deleteImageRow(db, imageId) {
   db.prepare('DELETE FROM images WHERE image_id = ?').run(imageId);
 }
+
+export function nextReadSeq(db, machineId, bootId) {
+  return db.prepare('SELECT COALESCE(MAX(read_seq), 0) + 1 AS n FROM card_reads WHERE machine_id = ? AND boot_id = ?').get(machineId, bootId).n;
+}

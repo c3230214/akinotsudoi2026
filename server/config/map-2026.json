@@ -1,0 +1,765 @@
+{
+ "_comment": "会場レイアウト（案）資料No.2 と ステージ発表スケジュール（案）資料No.3（2026-10-28 受領）から作成。座標は図の約30m=800pxで換算した概算で、実寸ではない。",
+ "venue": {
+  "name": "大垣城ホール",
+  "width": 53,
+  "depth": 65,
+  "note": "配置・時間は変更になる場合があります"
+ },
+ "places": [
+  {
+   "id": "hall",
+   "kind": "area",
+   "name": "大垣城ホール",
+   "x": 7.9,
+   "y": 0.0,
+   "w": 35.3,
+   "d": 54.9,
+   "h": 0,
+   "color": "#ffffff",
+   "sortOrder": 0
+  },
+  {
+   "id": "lobby",
+   "kind": "area",
+   "name": "ロビー",
+   "x": 7.7,
+   "y": 54.9,
+   "w": 42.3,
+   "d": 7.9,
+   "h": 0,
+   "color": "#f4f5f7",
+   "sortOrder": 1
+  },
+  {
+   "id": "stage",
+   "kind": "stage",
+   "name": "ステージ",
+   "x": 12.8,
+   "y": 0.2,
+   "w": 30.3,
+   "d": 5.3,
+   "h": 1.2,
+   "shortName": "ステージ",
+   "color": "#f6c9a8",
+   "sortOrder": 2
+  },
+  {
+   "id": "seats",
+   "kind": "area",
+   "name": "客席（イス93脚、車イスエリアあり）",
+   "x": 18.4,
+   "y": 10.2,
+   "w": 18.8,
+   "d": 4.9,
+   "h": 0,
+   "shortName": "客席",
+   "color": "#eef0f3",
+   "sortOrder": 3
+  },
+  {
+   "id": "scatball",
+   "kind": "booth",
+   "name": "スカットボール",
+   "x": 12.9,
+   "y": 18.3,
+   "w": 5.4,
+   "d": 3.9,
+   "h": 0.8,
+   "shortName": "スカットボール",
+   "organizer": "かがやきクラブ大垣",
+   "details": {
+    "fee": "無料"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 4
+  },
+  {
+   "id": "mini4wd",
+   "kind": "booth",
+   "name": "走れ！ミニ四駆レース",
+   "x": 21.8,
+   "y": 18.1,
+   "w": 9.4,
+   "d": 5.3,
+   "h": 0.8,
+   "shortName": "ミニ四駆",
+   "color": "#c9d8f2",
+   "sortOrder": 5
+  },
+  {
+   "id": "mokuiku",
+   "kind": "booth",
+   "name": "すくすく木育体験",
+   "x": 34.8,
+   "y": 17.9,
+   "w": 7.7,
+   "d": 5.4,
+   "h": 0.8,
+   "shortName": "木育体験",
+   "organizer": "NPO法人森とIT",
+   "color": "#c9d8f2",
+   "sortOrder": 6
+  },
+  {
+   "id": "keyholder",
+   "kind": "booth",
+   "name": "キーホルダーづくりなど",
+   "x": 17.0,
+   "y": 26.6,
+   "w": 5.3,
+   "d": 3.5,
+   "h": 0.8,
+   "shortName": "キーホルダー",
+   "organizer": "D'i-ci",
+   "details": {
+    "fee": "500円〜"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 7
+  },
+  {
+   "id": "zouri",
+   "kind": "booth",
+   "name": "布ぞうりづくり",
+   "x": 24.9,
+   "y": 26.6,
+   "w": 5.3,
+   "d": 3.5,
+   "h": 0.8,
+   "shortName": "布ぞうり",
+   "organizer": "大垣市くらしのセミナー",
+   "details": {
+    "fee": "500円"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 8
+  },
+  {
+   "id": "lantern",
+   "kind": "booth",
+   "name": "ランタンづくりなど",
+   "x": 33.4,
+   "y": 26.6,
+   "w": 5.5,
+   "d": 3.5,
+   "h": 0.8,
+   "shortName": "ランタン",
+   "organizer": "女性防火クラブ",
+   "details": {
+    "fee": "100円、500円"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 9
+  },
+  {
+   "id": "brooch",
+   "kind": "booth",
+   "name": "古布ブローチづくりなど",
+   "x": 17.0,
+   "y": 31.3,
+   "w": 5.3,
+   "d": 3.3,
+   "h": 0.8,
+   "shortName": "古布ブローチ",
+   "organizer": "福和家",
+   "details": {
+    "fee": "500円"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 10
+  },
+  {
+   "id": "origami",
+   "kind": "booth",
+   "name": "折り紙でサンタづくり",
+   "x": 24.9,
+   "y": 31.3,
+   "w": 5.3,
+   "d": 3.3,
+   "h": 0.8,
+   "shortName": "折り紙",
+   "organizer": "喜多方折り紙同好会",
+   "details": {
+    "fee": "無料"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 11
+  },
+  {
+   "id": "ribbon",
+   "kind": "booth",
+   "name": "オリジナルリボンづくり",
+   "x": 33.4,
+   "y": 31.3,
+   "w": 5.5,
+   "d": 3.3,
+   "h": 0.8,
+   "shortName": "リボン",
+   "organizer": "ひといろco-Lab",
+   "details": {
+    "fee": "300円"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 12
+  },
+  {
+   "id": "flower",
+   "kind": "booth",
+   "name": "フラワーアレンジなど",
+   "x": 17.0,
+   "y": 35.9,
+   "w": 5.3,
+   "d": 3.3,
+   "h": 0.8,
+   "shortName": "フラワー",
+   "organizer": "あじさい花工房",
+   "details": {
+    "fee": "600円〜1,000円"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 13
+  },
+  {
+   "id": "kite",
+   "kind": "booth",
+   "name": "ダイヤ凧づくり",
+   "x": 24.9,
+   "y": 35.9,
+   "w": 5.3,
+   "d": 3.3,
+   "h": 0.8,
+   "shortName": "ダイヤ凧",
+   "organizer": "大垣凧愛好会",
+   "details": {
+    "fee": "100円"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 14
+  },
+  {
+   "id": "smastown",
+   "kind": "booth",
+   "name": "スマスタウン体験",
+   "x": 33.4,
+   "y": 35.9,
+   "w": 5.5,
+   "d": 3.3,
+   "h": 0.8,
+   "shortName": "スマスタウン",
+   "organizer": "子ども未来カレッジ",
+   "details": {
+    "fee": "100円"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 15
+  },
+  {
+   "id": "toyhospital",
+   "kind": "booth",
+   "name": "おもちゃ病院",
+   "x": 17.0,
+   "y": 40.3,
+   "w": 5.3,
+   "d": 3.5,
+   "h": 0.8,
+   "shortName": "おもちゃ病院",
+   "organizer": "おもちゃ病院おおがき",
+   "color": "#c9d8f2",
+   "sortOrder": 16
+  },
+  {
+   "id": "mancala",
+   "kind": "booth",
+   "name": "マンカラ",
+   "x": 24.9,
+   "y": 40.3,
+   "w": 5.3,
+   "d": 3.5,
+   "h": 0.8,
+   "shortName": "マンカラ",
+   "organizer": "レクリエーション協会",
+   "details": {
+    "fee": "無料"
+   },
+   "color": "#cfe7c4",
+   "sortOrder": 17
+  },
+  {
+   "id": "canbadge",
+   "kind": "booth",
+   "name": "チャリティフォト缶バッジ",
+   "x": 33.4,
+   "y": 40.3,
+   "w": 5.5,
+   "d": 3.5,
+   "h": 0.8,
+   "shortName": "缶バッジ",
+   "details": {
+    "fee": "200円"
+   },
+   "color": "#c9d8f2",
+   "sortOrder": 18
+  },
+  {
+   "id": "nigaoe",
+   "kind": "booth",
+   "name": "似顔絵コーナー",
+   "x": 17.0,
+   "y": 45.1,
+   "w": 2.7,
+   "d": 3.5,
+   "h": 0.8,
+   "shortName": "似顔絵",
+   "details": {
+    "fee": "200円"
+   },
+   "color": "#c9d8f2",
+   "sortOrder": 19
+  },
+  {
+   "id": "okurukotoba",
+   "kind": "booth",
+   "name": "贈る言葉コーナー",
+   "x": 25.0,
+   "y": 45.1,
+   "w": 3.5,
+   "d": 2.6,
+   "h": 0.8,
+   "shortName": "贈る言葉",
+   "details": {
+    "fee": "500円"
+   },
+   "color": "#c9d8f2",
+   "sortOrder": 20
+  },
+  {
+   "id": "photospot",
+   "kind": "booth",
+   "name": "フォトスポット",
+   "x": 33.4,
+   "y": 45.1,
+   "w": 3.8,
+   "d": 2.4,
+   "h": 1.0,
+   "shortName": "フォトスポット",
+   "color": "#c9d8f2",
+   "sortOrder": 21
+  },
+  {
+   "id": "bousai",
+   "kind": "booth",
+   "name": "防災体験コーナー",
+   "x": 39.9,
+   "y": 45.1,
+   "w": 3.1,
+   "d": 4.8,
+   "h": 0.8,
+   "shortName": "防災体験",
+   "color": "#c9d8f2",
+   "sortOrder": 22
+  },
+  {
+   "id": "tenji",
+   "kind": "booth",
+   "name": "展示",
+   "x": 41.0,
+   "y": 51.5,
+   "w": 1.5,
+   "d": 1.7,
+   "h": 0.8,
+   "shortName": "展示",
+   "color": "#e2dcf2",
+   "sortOrder": 23
+  },
+  {
+   "id": "panel-left",
+   "kind": "booth",
+   "name": "団体紹介パネル（1〜15）",
+   "x": 12.6,
+   "y": 26.6,
+   "w": 1.1,
+   "d": 25.5,
+   "h": 1.6,
+   "shortName": "パネル1〜15",
+   "description": "1. かがやきクラブ大垣\n2. NPO法人大垣観光協会\n3. ふるさと大垣おもてなし隊\n4. NPO法人緑の風\n5. OSアンサンブル風\n6. 大垣市連合自治会連絡協議会\n7. 大垣市シルバーリハビリ体操指導士会\n8. NPO法人旅人とたいようの会\n9. NPO法人ヘレンケラー岐阜\n10. NPO法人大垣おやこ劇場\n11. NPO法人くすくす\n12. ドリームアート\n13. 大垣夢ある女性の会\n14. NPO法人水都まちづくり\n15. NPO法人ジョインハート",
+   "color": "#f6e7b5",
+   "sortOrder": 24
+  },
+  {
+   "id": "panel-right",
+   "kind": "booth",
+   "name": "団体紹介パネル（16〜25）",
+   "x": 42.1,
+   "y": 26.3,
+   "w": 1.1,
+   "d": 16.9,
+   "h": 1.6,
+   "shortName": "パネル16〜25",
+   "description": "16. 公益財団法人国際交流協会\n17. 大垣市女性防火クラブ連絡協議会\n18. ひといろco-Lab\n19. ヒッポファミリークラブ\n20. 大垣ユネスコ協会\n21. 認定NPO法人車椅子レクダンス協会大垣\n22. おおがきこども未来カレッジ\n23. 大垣点訳グループ愛盲会\n24. NPO法人岐阜県園芸福祉協会西濃支部\n25. ドローンサッカーで繋がる会",
+   "color": "#f6e7b5",
+   "sortOrder": 25
+  },
+  {
+   "id": "wc",
+   "kind": "facility",
+   "name": "トイレ（W.C.）",
+   "x": 8.7,
+   "y": 41.7,
+   "w": 1.6,
+   "d": 6.4,
+   "h": 0.6,
+   "shortName": "トイレ",
+   "color": "#dfe3e8",
+   "sortOrder": 26
+  },
+  {
+   "id": "prize",
+   "kind": "facility",
+   "name": "まるごと体験ビンゴ景品交換所",
+   "x": 25.0,
+   "y": 52.0,
+   "w": 7.1,
+   "d": 2.7,
+   "h": 1.0,
+   "shortName": "景品交換所",
+   "color": "#f8c9b4",
+   "sortOrder": 27
+  },
+  {
+   "id": "info",
+   "kind": "facility",
+   "name": "総合案内所",
+   "x": 16.9,
+   "y": 51.1,
+   "w": 2.6,
+   "d": 3.6,
+   "h": 1.0,
+   "shortName": "総合案内",
+   "color": "#dfe3e8",
+   "sortOrder": 28
+  },
+  {
+   "id": "monitor",
+   "kind": "facility",
+   "name": "モニター（消費者啓発）",
+   "x": 24.1,
+   "y": 57.7,
+   "w": 1.5,
+   "d": 1.3,
+   "h": 0.8,
+   "shortName": "モニター",
+   "color": "#dfe3e8",
+   "sortOrder": 29
+  },
+  {
+   "id": "stroller",
+   "kind": "facility",
+   "name": "ベビーカー置き場",
+   "x": 26.3,
+   "y": 59.0,
+   "w": 4.5,
+   "d": 1.7,
+   "h": 0.2,
+   "shortName": "ベビーカー",
+   "color": "#dfe3e8",
+   "sortOrder": 30
+  },
+  {
+   "id": "survey",
+   "kind": "facility",
+   "name": "アンケート",
+   "x": 35.2,
+   "y": 56.8,
+   "w": 1.0,
+   "d": 4.3,
+   "h": 0.8,
+   "shortName": "アンケート",
+   "color": "#f3d6e4",
+   "sortOrder": 31
+  },
+  {
+   "id": "rest",
+   "kind": "facility",
+   "name": "休憩所",
+   "x": 38.3,
+   "y": 57.7,
+   "w": 2.3,
+   "d": 2.6,
+   "h": 0.6,
+   "shortName": "休憩所",
+   "color": "#dfe3e8",
+   "sortOrder": 32
+  },
+  {
+   "id": "reception",
+   "kind": "facility",
+   "name": "案内所",
+   "x": 15.2,
+   "y": 62.0,
+   "w": 3.2,
+   "d": 1.9,
+   "h": 0.8,
+   "shortName": "案内所",
+   "color": "#dfe3e8",
+   "sortOrder": 33
+  },
+  {
+   "id": "entrance",
+   "kind": "facility",
+   "name": "入口",
+   "x": 18.8,
+   "y": 62.6,
+   "w": 2.6,
+   "d": 1.5,
+   "h": 0.2,
+   "shortName": "入口",
+   "color": "#bfe3d6",
+   "sortOrder": 34
+  },
+  {
+   "id": "exit",
+   "kind": "facility",
+   "name": "出口",
+   "x": 36.7,
+   "y": 62.2,
+   "w": 2.3,
+   "d": 1.5,
+   "h": 0.2,
+   "shortName": "出口",
+   "color": "#bfe3d6",
+   "sortOrder": 35
+  },
+  {
+   "id": "daiko",
+   "kind": "outdoor",
+   "name": "だいこう列車に乗ってGo!!",
+   "x": 3.5,
+   "y": 5.6,
+   "w": 4.4,
+   "d": 15.4,
+   "h": 1.0,
+   "shortName": "だいこう列車",
+   "organizer": "大垣工業高等学校",
+   "color": "#e2dcf2",
+   "sortOrder": 36
+  },
+  {
+   "id": "groundgolf",
+   "kind": "outdoor",
+   "name": "元気に親子でグラウンドゴルフ",
+   "x": 1.1,
+   "y": 44.5,
+   "w": 4.7,
+   "d": 7.5,
+   "h": 0.8,
+   "shortName": "グラウンドゴルフ",
+   "organizer": "グラウンドゴルフ協会",
+   "color": "#cfe7c4",
+   "sortOrder": 37
+  },
+  {
+   "id": "ohagi",
+   "kind": "outdoor",
+   "name": "おはぎ販売",
+   "x": 39.8,
+   "y": 61.8,
+   "w": 5.0,
+   "d": 2.6,
+   "h": 0.8,
+   "shortName": "おはぎ販売",
+   "organizer": "食生活改善協議会",
+   "color": "#f3d6e4",
+   "sortOrder": 38
+  }
+ ],
+ "programs": [
+  {
+   "id": "p00",
+   "stageId": "stage",
+   "title": "オープニングセレモニー",
+   "startsAt": "2026-11-01T09:30+09:00",
+   "endsAt": "2026-11-01T10:00+09:00",
+   "sortOrder": 0
+  },
+  {
+   "id": "p01",
+   "stageId": "stage",
+   "title": "1 ダンス",
+   "organizer": "Pure Dream Angels",
+   "startsAt": "2026-11-01T10:00+09:00",
+   "endsAt": "2026-11-01T10:15+09:00",
+   "sortOrder": 1
+  },
+  {
+   "id": "p02",
+   "stageId": "stage",
+   "title": "2 フラダンス",
+   "organizer": "プアレイアロハ",
+   "startsAt": "2026-11-01T10:15+09:00",
+   "endsAt": "2026-11-01T10:30+09:00",
+   "sortOrder": 2
+  },
+  {
+   "id": "p03",
+   "stageId": "stage",
+   "title": "3 三線の演奏と歌の披露",
+   "organizer": "八重山うた大哲会",
+   "startsAt": "2026-11-01T10:30+09:00",
+   "endsAt": "2026-11-01T10:45+09:00",
+   "sortOrder": 3
+  },
+  {
+   "id": "p04",
+   "stageId": "stage",
+   "title": "4 ベリーダンス",
+   "organizer": "チエノアトリエ",
+   "startsAt": "2026-11-01T10:45+09:00",
+   "endsAt": "2026-11-01T11:00+09:00",
+   "sortOrder": 4
+  },
+  {
+   "id": "p05",
+   "stageId": "stage",
+   "title": "5 オカリナ演奏",
+   "organizer": "れんげ草",
+   "startsAt": "2026-11-01T11:00+09:00",
+   "endsAt": "2026-11-01T11:15+09:00",
+   "sortOrder": 5
+  },
+  {
+   "id": "p06",
+   "stageId": "stage",
+   "title": "6 民踊",
+   "organizer": "南踊会",
+   "startsAt": "2026-11-01T11:15+09:00",
+   "endsAt": "2026-11-01T11:30+09:00",
+   "sortOrder": 6
+  },
+  {
+   "id": "p07",
+   "stageId": "stage",
+   "title": "7 ダンス",
+   "organizer": "青墓ダンスエクササイズ",
+   "startsAt": "2026-11-01T11:30+09:00",
+   "endsAt": "2026-11-01T11:45+09:00",
+   "sortOrder": 7
+  },
+  {
+   "id": "p08",
+   "stageId": "stage",
+   "title": "8 こどもたちによる活動発表",
+   "organizer": "おおがきこども未来カレッジ",
+   "startsAt": "2026-11-01T11:45+09:00",
+   "endsAt": "2026-11-01T12:00+09:00",
+   "sortOrder": 8
+  },
+  {
+   "id": "p09",
+   "stageId": "stage",
+   "title": "休憩",
+   "startsAt": "2026-11-01T12:00+09:00",
+   "endsAt": "2026-11-01T12:30+09:00",
+   "sortOrder": 9
+  },
+  {
+   "id": "p10",
+   "stageId": "stage",
+   "title": "9 女声合唱",
+   "organizer": "合唱団OMC",
+   "startsAt": "2026-11-01T12:30+09:00",
+   "endsAt": "2026-11-01T12:45+09:00",
+   "sortOrder": 10
+  },
+  {
+   "id": "p11",
+   "stageId": "stage",
+   "title": "10 楊名時八段錦太極拳演舞",
+   "organizer": "大垣鶴の会",
+   "startsAt": "2026-11-01T12:45+09:00",
+   "endsAt": "2026-11-01T13:00+09:00",
+   "sortOrder": 11
+  },
+  {
+   "id": "p12",
+   "stageId": "stage",
+   "title": "11 ヨサコイ",
+   "organizer": "セーノーどっこいしょ",
+   "startsAt": "2026-11-01T13:00+09:00",
+   "endsAt": "2026-11-01T13:15+09:00",
+   "sortOrder": 12
+  },
+  {
+   "id": "p13",
+   "stageId": "stage",
+   "title": "12 空手の披露",
+   "organizer": "CHERRY空手クラブ",
+   "startsAt": "2026-11-01T13:15+09:00",
+   "endsAt": "2026-11-01T13:30+09:00",
+   "sortOrder": 13
+  },
+  {
+   "id": "p14",
+   "stageId": "stage",
+   "title": "13 民踊・ダンス",
+   "organizer": "あしたばの会",
+   "startsAt": "2026-11-01T13:30+09:00",
+   "endsAt": "2026-11-01T13:45+09:00",
+   "sortOrder": 14
+  },
+  {
+   "id": "p15",
+   "stageId": "stage",
+   "title": "14 マジック",
+   "organizer": "大垣アマチュアマジシャンズクラブ",
+   "startsAt": "2026-11-01T13:45+09:00",
+   "endsAt": "2026-11-01T14:00+09:00",
+   "sortOrder": 15
+  },
+  {
+   "id": "p16",
+   "stageId": "stage",
+   "title": "15 車椅子とのレクダンス",
+   "organizer": "認定NPO法人車椅子レクダンス協会大垣",
+   "startsAt": "2026-11-01T14:00+09:00",
+   "endsAt": "2026-11-01T14:15+09:00",
+   "sortOrder": 16
+  },
+  {
+   "id": "p17",
+   "stageId": "stage",
+   "title": "16 レクリエーションダンス",
+   "organizer": "グレイスR．C",
+   "startsAt": "2026-11-01T14:15+09:00",
+   "endsAt": "2026-11-01T14:30+09:00",
+   "sortOrder": 17
+  },
+  {
+   "id": "p18",
+   "stageId": "stage",
+   "title": "17 フラダンス",
+   "organizer": "ナ メレ フラ オハナ",
+   "startsAt": "2026-11-01T14:30+09:00",
+   "endsAt": "2026-11-01T14:45+09:00",
+   "sortOrder": 18
+  },
+  {
+   "id": "p19",
+   "stageId": "stage",
+   "title": "18 尺八などの演奏",
+   "organizer": "OSアンサンブル風",
+   "startsAt": "2026-11-01T14:45+09:00",
+   "endsAt": "2026-11-01T15:00+09:00",
+   "sortOrder": 19
+  },
+  {
+   "id": "p20",
+   "stageId": "stage",
+   "title": "クロージング・閉会宣言",
+   "organizer": "長瀬委員長",
+   "startsAt": "2026-11-01T15:00+09:00",
+   "endsAt": "2026-11-01T15:10+09:00",
+   "sortOrder": 20
+  }
+ ]
+}

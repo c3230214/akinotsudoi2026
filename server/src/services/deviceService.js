@@ -2,11 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { tx } from '../db/connection.js';
 import {
-  findDeviceEvent, findImage, findMachineByTokenHash, insertCardRead, insertDeviceEvent, insertImage, lastSeqOf,
+  nextReadSeq, findDeviceEvent, findImage, findMachineByTokenHash, insertCardRead, insertDeviceEvent, insertImage, lastSeqOf,
   listMachineRows, listStreams, pendingCardRead, recordHeartbeat, setLastSeq,
 } from '../db/repos/deviceRepo.js';
 import { DomainError, fail, invalid } from '../domain/errors.js';
-import { validateMarks, COLORS } from '../domain/rules.js';
+import { validateMarks, COLORS, completeLines, entitledDraws } from '../domain/rules.js';
 import { addMs } from '../time.js';
 import { randomToken, sha256 } from './secrets.js';
 import { requestHash } from './drawService.js';
@@ -177,6 +177,67 @@ export function createDeviceService({ db, clock, draw, bus, imageDir, imageReten
     };
   }
 
+  // ---------- camera station (Chrome on the venue Windows PC, 2026-10-28) ----------
+  const CAMERA_BOOT = 'camera-station';
+  const HINT_TTL_MS = 3 * 60 * 1000;
+  const hints = new Map(); // machineId -> [{ id, color, confidence, at }]
+  let hintSeq = 0;
+
+  /**
+   * Card read from the browser camera page. Paper: cells from the sticker
+   * detection (null = unsure). Digital: the QR text, verified now and never
+   * stored. Either way the read waits for the operator on that machine's tablet.
+   */
+  async function receiveBrowserCardRead(machineId, body) {
+    if (!draw.getState().machines[machineId]) fail('UNKNOWN_MACHINE', '台が見つかりません', { status: 404 });
+    if (!['paper', 'digital'].includes(body?.kind)) invalid('kind must be paper or digital');
+    let qrCardId = null;
+    let preview = null;
+    if (body.kind === 'paper') {
+      validateMarks(body.cells, { allowNull: true });
+      if (typeof body.cornerPresent !== 'boolean' && body.cornerPresent !== null) invalid('cornerPresent must be boolean or null');
+      const lines = completeLines(body.cells);
+      preview = { lines, draws: entitledDraws(lines), unsure: body.cells.filter((c) => c === null).length };
+    } else {
+      if (typeof body.qrPayload !== 'string' || body.qrPayload.length > 300) invalid('qrPayload is required');
+      qrCardId = cards.verifyDigital(body.qrPayload).id;
+      preview = cards.previewById(qrCardId);
+      if (preview.used) fail('CARD_ALREADY_USED', `このカードは ${preview.usedAt} に受付済みです`);
+      if (preview.draws === 0) fail('NO_LINES', 'ビンゴのラインが成立していないカードです', { status: 422 });
+    }
+    let imageId = null;
+    if (typeof body.image === 'string' && body.image.startsWith('data:image/jpeg;base64,')) {
+      imageId = (await saveImage(machineId, Buffer.from(body.image.slice(23), 'base64'), 'image/jpeg')).imageId;
+    }
+    const at = clock();
+    const readId = tx(db, () => insertCardRead(db, {
+      machineId, bootId: CAMERA_BOOT, readSeq: nextReadSeq(db, machineId, CAMERA_BOOT), kind: body.kind,
+      cells: body.kind === 'paper' ? body.cells : null, cornerPresent: body.kind === 'paper' ? body.cornerPresent : null,
+      hasQr: body.kind === 'digital', qrCardId, qrError: null, readAt: at, receivedAt: at, imageId,
+    }));
+    bus.publish('draw', { touched: [machineId], events: [] });
+    return { readId, machineId, preview };
+  }
+
+  /** Ball colour seen by a camera: a hint shown on the tablet, never recorded by itself. */
+  function addHint(machineId, body) {
+    if (!draw.getState().machines[machineId]) fail('UNKNOWN_MACHINE', '台が見つかりません', { status: 404 });
+    const color = body?.color === null ? null : body?.color;
+    if (color !== null && !COLORS.includes(color)) invalid('color must be a ball colour or null');
+    const confidence = typeof body?.confidence === 'number' ? Math.max(0, Math.min(1, body.confidence)) : null;
+    hintSeq += 1;
+    const list = (hints.get(machineId) ?? []).filter((h) => Date.parse(clock()) - Date.parse(h.at) < HINT_TTL_MS);
+    list.unshift({ id: `h${hintSeq}`, color, confidence, at: clock() });
+    hints.set(machineId, list.slice(0, 5));
+    bus.publish('draw', { touched: [machineId], events: [] });
+    return { id: `h${hintSeq}` };
+  }
+
+  function listHints(machineId) {
+    const now = Date.parse(clock());
+    return (hints.get(machineId) ?? []).filter((h) => now - Date.parse(h.at) < HINT_TTL_MS);
+  }
+
   function getDeviceStatus() {
     const rows = new Map(listMachineRows(db).map((r) => [r.machineId, r]));
     const at = Date.parse(clock());
@@ -189,10 +250,21 @@ export function createDeviceService({ db, clock, draw, bus, imageDir, imageReten
         bootId: r?.bootId ?? null,
         heartbeat: r?.heartbeat ?? null,
         streams: listStreams(db, id),
-        pendingRead: pendingCardRead(db, id),
+        pendingRead: withPreview(pendingCardRead(db, id)),
+        hints: listHints(id),
       }];
     }));
   }
 
-  return { authenticate, receiveBallEvent, receiveCardRead, receiveHeartbeat, saveImage, imagePath, getDeviceState, getDeviceStatus, isOnline, deviceOnlineMap };
+  function withPreview(read) {
+    if (!read) return read;
+    if (read.qrCardId) return { ...read, preview: cards.previewById(read.qrCardId) };
+    if (read.cells) {
+      const lines = completeLines(read.cells);
+      return { ...read, preview: { lines, draws: entitledDraws(lines), unsure: read.cells.filter((c) => c === null).length } };
+    }
+    return read;
+  }
+
+  return { receiveBrowserCardRead, addHint, listHints, authenticate, receiveBallEvent, receiveCardRead, receiveHeartbeat, saveImage, imagePath, getDeviceState, getDeviceStatus, isOnline, deviceOnlineMap };
 }

@@ -1,0 +1,30 @@
+.chead { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: #fff; border-bottom: 2px solid var(--accent); position: sticky; top: 0; z-index: 5; }
+.chead h1 { margin: 0; font-size: 1.15em; }
+main { max-width: 1500px; margin: 0 auto; padding: 0 12px 40px; }
+.layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; align-items: start; }
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+.cam { position: relative; background: #111; border-radius: 10px; overflow: hidden; aspect-ratio: 4 / 3; }
+.cam video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.cam canvas.overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cam .badge { position: absolute; left: 8px; top: 8px; background: rgba(0, 0, 0, .65); color: #fff; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
+.cam.picking { cursor: crosshair; outline: 4px solid var(--warn); }
+.send { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.send .btn { min-height: 64px; font-size: 1.15em; }
+.send .btn.suggest { box-shadow: 0 0 0 4px #ffd166; }
+.result { border: 2px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 8px; background: #fff; }
+.result.ok { border-color: var(--ok); }
+.result.err { border-color: var(--danger); }
+.mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; max-width: 260px; }
+.mini-grid span { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; border: 2px solid #111; border-radius: 4px; font-weight: 800; background: #fff; font-size: 13px; }
+.mini-grid .on { background: #fde2d6; color: var(--accent-dark); }
+.mini-grid .unsure { background: #fff6e5; border-style: dashed; }
+.mini-grid small { font-weight: 400; font-size: 10px; color: var(--muted); }
+.balls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ballinfo { font-size: 1.1em; font-weight: 800; margin: 6px 0; min-height: 1.6em; }
+.small { font-size: .85em; }
+.tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.tools label { font-weight: 600; font-size: .9em; }
+.tools input[type=range] { width: 140px; min-height: 0; }
+.devsel { display: grid; grid-template-columns: max-content 1fr; gap: 6px 10px; align-items: center; }
+.tools label:has(input[type=checkbox]) { display: inline-flex; gap: 6px; align-items: center; }
+.tools input[type=checkbox] { min-height: 0; width: 20px; height: 20px; }

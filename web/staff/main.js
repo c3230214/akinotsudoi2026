@@ -20,6 +20,7 @@ const st = {
   tab: null,
   paper: Array(9).fill(false),
   digital: null, // { payload, info }
+  usedHints: new Set(),
   audit: { rows: [], next: null },
   redeem: null,
   closeStream: null,
@@ -219,7 +220,8 @@ function viewIntake(m) {
             <div>
               <p class="muted">元の判定：${read.cells.map((x, i) => `${CIRCLED[i]}${x === true ? '○' : x === null ? '？' : '×'}`).join(' ')}</p>
               ${cellToggles(st.readMarks, 'read')}
-              <p><strong>${rp.lines}ライン → 抽選${rp.n}回</strong>（最終判定はサーバー）</p>
+              <p class="draws-big">${rp.lines}ライン → ガラガラ <strong>${rp.n}回</strong></p>
+              ${st.readMarks.includes(null) ? html`<p class="notice">「要確認」のマスをタップして、シールの有無を決めてください。</p>` : ''}
               ${read.cornerPresent === false ? html`<p class="notice notice-danger">抽選確認の角が欠けている可能性があります。理由なしには受付できません。</p>
                 <label for="read-corner-reason">角がない理由</label><input id="read-corner-reason" class="wide">` : ''}
               ${changed ? html`<label for="read-reason">修正した理由（必須）</label><input id="read-reason" class="wide">` : ''}
@@ -234,7 +236,9 @@ function viewIntake(m) {
       readPanel = html`
         <section class="panel">
           <h2>C1読取結果（デジタルカード）</h2>
-          ${read.qrCardId ? html`<p>カード ${read.qrCardId} を読み取りました。</p><button class="btn" data-act="acceptDigitalRead">受付</button>` : html`<p class="notice notice-danger">QRを確認できません：${read.qrError ?? '不明'}</p>`}
+          ${read.qrCardId ? html`<p>カード ${read.qrCardId} を読み取りました。</p>
+            ${read.preview ? html`<p class="draws-big">${read.preview.lines}ライン → ガラガラ <strong>${read.preview.draws}回</strong></p>` : ''}
+            ${read.preview?.used ? html`<p class="notice notice-danger">このカードは受付済みです</p>` : html`<button class="btn btn-ok" data-act="acceptDigitalRead">${m.name}で受付する</button>`}` : html`<p class="notice notice-danger">QRを確認できません：${read.qrError ?? '不明'}</p>`}
           <button class="btn btn-plain" data-act="dismissRead">破棄</button>
         </section>`;
     }
@@ -287,6 +291,11 @@ function viewSession(m) {
         ${COLORS.map((c) => html`<button type="button" class="cbtn cbtn-${c}" data-ball="${c}"><span class="ball ball-${c}" aria-hidden="true"></span>${COLOR_LABELS[c]}</button>`)}
       </div>
       <p class="muted small">玉が出るたびに、出た順に色を押してください。回数を超えた玉も記録します（超過玉は当選に含めません）。</p>` : html`<p class="notice">自動読取モードです。C2の判定を確認し、要確認の玉は色を確定してください。</p>`}
+      ${m.inputMode === 'manual' && (m.device?.hints ?? []).filter((h) => !st.usedHints.has(h.id)).length ? html`
+      <div class="hints"><span class="muted small">カメラの認識（候補）：</span>${m.device.hints.filter((h) => !st.usedHints.has(h.id)).slice(0, 3).map((h) => html`
+        <span class="hint">${ballChip(h.color, h.color ? `${COLOR_LABELS[h.color]}${h.confidence !== null ? ` ${Math.round(h.confidence * 100)}%` : ''}` : '判定できず')} ${fmtTime(h.at)}
+        ${h.color ? html`<button class="btn btn-small btn-ok" data-hint-color="${h.color}" data-hint-id="${h.id}">この色で記録</button>` : ''}
+        <button class="btn btn-small btn-plain" data-hint-skip="${h.id}">無視</button></span>`)}</div>` : ''}
       <ol class="balls">${s.balls.map((b) => html`
         <li class="ballrow kind-${b.kind}${b.review ? ' needs-review' : ''}">
           <span class="ord">${b.order}個目</span>${ballChip(b.color, b.colorLabel)}
@@ -491,6 +500,19 @@ function bind(root) {
         .catch(showError);
     });
   }
+  for (const b of $$('[data-hint-color]', root)) {
+    b.addEventListener('click', () => {
+      const m = machine();
+      const s = m?.activeSession;
+      if (!s) return;
+      st.usedHints.add(b.dataset.hintId);
+      queue.push({ type: 'manualBall', machineId: m.id, sessionId: s.id, color: b.dataset.hintColor })
+        .then((out) => toast(out.message, { kind: 'ok', ms: 1500 }))
+        .catch(showError);
+      draw();
+    });
+  }
+  for (const b of $$('[data-hint-skip]', root)) b.addEventListener('click', () => { st.usedHints.add(b.dataset.hintSkip); draw(); });
   const corner = $('#paper-corner');
   if (corner) {
     const sync = () => { $('#paper-corner-reason-wrap').hidden = corner.checked; };

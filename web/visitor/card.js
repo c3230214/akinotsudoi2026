@@ -20,9 +20,9 @@ export function renderCardFace(card) {
   const cells = card.cells.map((c) => html`
     <li class="cell-slot">
       <button type="button" class="cell${c.marked ? ' is-marked' : ''}" data-cell="${c.index}"
-        aria-label="${CIRCLED[c.index]} ${c.label}：${c.marked ? '体験済み' : TAP_CELLS.includes(c.index) ? 'まだ。タップすると達成' : 'まだ。タップしてQRコードを読み取る'}">
+        aria-label="${CIRCLED[c.index]} ${c.label}：${c.marked ? '達成済み' : TAP_CELLS.includes(c.index) ? 'まだ。タップすると達成' : 'まだ。タップしてQRコードを読み取る'}">
         <img class="cell-art" src="/assets/cell-${c.index + 1}.webp" alt="" width="420" height="400" decoding="async">
-        ${c.marked ? html`<span class="cell-done" aria-hidden="true">体験済</span>` : ''}
+        ${c.marked ? html`<span class="cell-done" aria-hidden="true">達成済み</span>` : ''}
       </button>
     </li>`);
   return html`

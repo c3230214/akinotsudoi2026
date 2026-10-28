@@ -63,7 +63,9 @@ function renderCard() {
   if (!c) return;
   render(root, html`
     <div class="card-fit">${renderCardFace(c)}</div>
-    ${c.draws > 0 && !c.used ? html`<div class="card-bar"><button type="button" class="btn btn-secondary btn-block" id="show-qr">受付用QRを表示</button></div>` : ''}`);
+    ${c.draws > 0 && !c.used ? html`<div class="card-bar">${c.surveyRequired
+    ? html`<a class="btn btn-block" href="#survey">アンケートに答えて受付用QRを表示</a>`
+    : html`<button type="button" class="btn btn-secondary btn-block" id="show-qr">受付用QRを表示</button>`}</div>` : ''}`);
   for (const b of $$('[data-cell]', root)) b.addEventListener('click', () => openCell(Number(b.dataset.cell)));
   $('#show-qr')?.addEventListener('click', showQr);
 }
@@ -255,6 +257,7 @@ async function loadSurvey() {
   if (!s.hasCard) return render(root, html`${title}<p class="notice">回答にはデジタルビンゴカードが必要です。<a href="#card">カードを受け取る</a></p>`);
   if (s.answered) {
     return render(root, html`${title}<p class="notice notice-ok">ご回答ありがとうございました（${fmtTime(s.answeredAt)}）。</p>
+      <p><a class="btn btn-block" href="#card">ビンゴカードに戻る</a></p>
       ${s.giftEnabled ? html`<p>${s.giftAt ? 'お礼はお渡し済みです。' : '景品交換所でカードのQRを見せるとお礼を受け取れます。'}</p>` : ''}`);
   }
   const radios = (name, list) => list.map((label) => html`<label class="chip-opt"><input type="radio" name="${name}" value="${label}" required><span>${label}</span></label>`);
@@ -278,7 +281,14 @@ async function loadSurvey() {
         comment: f.get('comment') ?? '', consent: f.get('consent') === 'on',
       });
       toast('送信しました。ありがとうございました', { kind: 'ok' });
-      loadSurvey();
+      // The intake QR becomes available after answering; show it right away when the card can draw.
+      try { state.card = await getJson('/api/visitor/card'); } catch { /* shown on next load */ }
+      if (state.card && state.card.draws > 0 && !state.card.used) {
+        location.hash = '#card';
+        setTimeout(showQr, 300);
+      } else {
+        loadSurvey();
+      }
     } catch (error) {
       toast(error.message, { kind: 'error' });
     }
@@ -350,7 +360,7 @@ function showPop(n) {
 function openMenu() {
   const c = state.card;
   openSheet('メニュー', html`<div class="stack menu">
-    ${c && !c.used && c.draws > 0 ? html`<button type="button" class="btn btn-secondary btn-block" id="menu-qr">受付用QRを表示</button>` : ''}
+    ${c && !c.used && c.draws > 0 && !c.surveyRequired ? html`<button type="button" class="btn btn-secondary btn-block" id="menu-qr">受付用QRを表示</button>` : ''}
     <a class="btn btn-plain btn-block" href="#map">会場マップ</a>
     <a class="btn btn-plain btn-block" href="#survey">アンケート</a>
     ${c ? html`<p class="muted small">カード番号 ${c.cardId}</p>` : ''}

@@ -128,5 +128,5 @@ export function createMapService({ db, clock }) {
     return { places: data.places.length, programs: data.programs.length };
   }
 
-  return { getPublicMap, exportMap, importMap };
+  return { getPublicMap, exportMap, importMap, hasMap: () => Boolean(getVenue(db)) };
 }

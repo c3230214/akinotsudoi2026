@@ -179,5 +179,12 @@ export function createCardService({ db, clock, draw, claimSecret, bus }) {
     return { cardId: card.id, used: view.used, usedAt: card.usedAt, usedSessionId: card.usedSessionId, marks: view.marks, lines: view.lines, draws: view.draws };
   }
 
-  return { issueCard, cardFromToken, getCardView, stamp, tapCell, acceptDigital, acceptPaper, dismissRead, verifyDigital, lookupForStaff, isCardId };
+  function previewById(cardId) {
+    const card = findCardById(db, cardId);
+    if (!card) return null;
+    const view = toCardView(card, listStamps(db, card.id), { centerMarked: centerMarked() });
+    return { cardId: card.id, used: view.used, usedAt: card.usedAt, marks: view.marks, lines: view.lines, draws: view.draws };
+  }
+
+  return { issueCard, cardFromToken, getCardView, stamp, tapCell, previewById, acceptDigital, acceptPaper, dismissRead, verifyDigital, lookupForStaff, isCardId };
 }

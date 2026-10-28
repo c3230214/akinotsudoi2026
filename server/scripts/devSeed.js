@@ -1,10 +1,8 @@
 // Development only: fills an empty dev DB so every screen can be exercised.
 //   node scripts/devSeed.js
 // Creates staff (admin / op1 / op2 / prize / printer, passcode "dev-passcode"),
-// sample inventory, the SAMPLE map and dev stamp points. Refuses in production.
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+// sample inventory and dev stamp points (the venue map loads from
+// config/map-2026.json on first start). Refuses in production.
 import { createServices } from '../src/app.js';
 import { upsertStampPoint } from '../src/db/repos/cardRepo.js';
 import { tx } from '../src/db/connection.js';
@@ -27,8 +25,6 @@ const s = svc.draw.getState();
 if (!s.inventoryConfigured) {
   svc.draw.execute({ actor: cli, action: { type: 'setInventory', contents: { 'garagara-1': { red: 8, green: 20, lightblue: 40, white: 80 }, 'garagara-2': { red: 8, green: 20, lightblue: 40, white: 80 } }, spare: { red: 4, green: 20, lightblue: 60, white: 150 } } });
 }
-const sample = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'config', 'map.sample.json'), 'utf8'));
-svc.maps.importMap(sample, cli);
 const tokens = [];
 tx(db, () => {
   for (const c of CELLS) {

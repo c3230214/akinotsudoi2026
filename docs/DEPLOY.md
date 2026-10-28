@@ -8,6 +8,8 @@ Node.js 22.13以降が必要です（`node:sqlite` を使うため）。`node --
 
 `node:sqlite` はNode.js 22では「実験的」機能の扱いで、起動時に警告が出ます。起動コマンドに `--disable-warning=ExperimentalWarning` を付けて抑止しています。Node.jsのメジャー更新でAPIが変わる可能性があるため、本番直前にNode.jsを更新しないでください。
 
+ブラウザがカメラを使えるのは、HTTPSのページか `localhost` だけです。カメラ画面（`/camera/`）は本番のHTTPSのURLで開いてください。HTTPのまま会場LANで試す場合は、Chromeの `chrome://flags/#unsafely-treat-insecure-origin-as-secure` にそのURLを登録する方法がありますが、試験用にとどめてください。
+
 ## 2. ZIPの作成（開発環境）
 
 ```sh

@@ -65,3 +65,7 @@ tr.rejected td { color: var(--danger); }
 .code { font-size: 1.6em; letter-spacing: .15em; font-family: ui-monospace, monospace; }
 .code-area { min-height: 320px; font-family: ui-monospace, monospace; font-size: 13px; }
 .sheet { padding: 16px; }
+.draws-big { font-size: 1.4em; font-weight: 800; margin: 6px 0; }
+.draws-big strong { font-size: 1.8em; color: var(--accent-dark); }
+.hints { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 8px 0; padding: 8px; border: 2px dashed var(--line); border-radius: 10px; background: #fbfbfd; }
+.hint { display: inline-flex; gap: 6px; align-items: center; }

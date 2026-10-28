@@ -8,8 +8,8 @@
 
 const SVGNS = 'http://www.w3.org/2000/svg';
 const UNIT = 20; // SVG user units per map unit
-const YAW = (16 * Math.PI) / 180;
-const ELEV = (50 * Math.PI) / 180;
+const YAW = (-18 * Math.PI) / 180;
+const ELEV = (56 * Math.PI) / 180;
 const TAP_SLOP = 8;
 const MIN_K = 0.15;
 const MAX_K = 6;

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
@@ -20,6 +21,7 @@ import { adminRoutes } from './http/routes/admin.js';
 import { deviceRoutes } from './http/routes/device.js';
 import { streamRoutes } from './http/routes/stream.js';
 import { basicAuthHook, panelRoutes } from './http/routes/panel.js';
+import { cameraRoutes } from './http/routes/camera.js';
 import { nowJst } from './time.js';
 
 const require_ = createRequire(import.meta.url);
@@ -35,6 +37,12 @@ export function createServices({ config, db, clock = nowJst }) {
   const auth = createAuthService({ db, clock, machineExists: (id) => Boolean(draw.getState().machines[id]) });
   const maps = createMapService({ db, clock });
   const surveys = createSurveyService({ db, clock });
+  // First start: load the bundled venue map (資料No.2/No.3) if none is stored.
+  // An administrator can replace it later; an existing map is never overwritten here.
+  const bundledMap = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'config', 'map-2026.json');
+  if (!maps.hasMap() && fs.existsSync(bundledMap)) {
+    maps.importMap(JSON.parse(fs.readFileSync(bundledMap, 'utf8')), { kind: 'system', id: 'bundled-map', name: '初期データ' });
+  }
   const notices = createNoticeService({ db, clock, eventDate: () => draw.getState().settings.heldOn, intakeClosed: () => draw.getState().intakeClosed });
   return { db, bus, draw, cards, devices, auth, maps, surveys, notices, clock };
 }
@@ -76,6 +84,7 @@ export function buildApp({ config, db = null, clock = nowJst, logger = false, se
     deviceRoutes(scope, svc);
     streamRoutes(scope, { ...svc, config });
     panelRoutes(scope, svc);
+    cameraRoutes(scope, svc);
   });
 
   if (config.webDir && fs.existsSync(config.webDir)) {

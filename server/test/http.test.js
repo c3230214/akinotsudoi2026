@@ -29,6 +29,11 @@ test('カード発行Cookieは HttpOnly/SameSite=Strict、同じCookieでは再�
   const again = await f.req('POST', '/api/visitor/cards', { cookie });
   assert.equal(again.json.issued, false);
   assert.equal(again.json.cardId, r.json.cardId);
+  // The intake QR needs the survey first (2026-10-28).
+  assert.equal((await f.req('GET', '/api/visitor/card/qr.svg', { cookie })).status, 403);
+  assert.equal(again.json.qrPayload, null);
+  assert.equal(again.json.surveyRequired, true);
+  await f.req('POST', '/api/visitor/survey', { cookie, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 4 } });
   const qr = await f.req('GET', '/api/visitor/card/qr.svg', { cookie });
   assert.equal(qr.status, 200);
   assert.match(qr.res.body, /<svg/);
@@ -89,6 +94,7 @@ test('スタンプQRでマスを埋め、デジタル受付でNをサーバー�
   assert.equal(dup.json.error, 'ALREADY_STAMPED');
   const bad = await f.req('POST', '/api/visitor/stamps', { cookie: visitor, body: { payload: 'MARUGOTO2026:STAMP:unknowntokenxxxxxxxxxxx' } });
   assert.equal(bad.status, 404);
+  await f.req('POST', '/api/visitor/survey', { cookie: visitor, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 4 } });
   const card = (await f.req('GET', '/api/visitor/card', { cookie: visitor })).json;
   assert.equal(card.lines, 1);
   assert.equal(card.draws, 1);
@@ -248,12 +254,16 @@ test('ログイン失敗が続くと429で止める', async (t) => {
   assert.equal(right.status, 429);
 });
 
-test('会場マップ：未登録なら準備中の会場だけ、取込後はブースとステージ予定を返す。不正データは拒否', async (t) => {
+test('会場マップ：初回は同梱の会場レイアウトとステージ予定（資料No.2/No.3）、取込で置き換え、不正データは拒否', async (t) => {
   const f = await makeApp();
   t.after(() => f.close());
-  const empty = (await f.req('GET', '/api/map', { origin: null })).json;
-  assert.equal(empty.places.length, 0);
-  assert.equal(empty.venue.name, '大垣城ホール');
+  const bundled = (await f.req('GET', '/api/map', { origin: null })).json;
+  assert.equal(bundled.venue.name, '大垣城ホール');
+  const names = bundled.places.map((p) => p.shortName ?? p.name);
+  for (const n of ['ステージ', 'だいこう列車', 'グラウンドゴルフ', 'おはぎ販売', '景品交換所']) assert.ok(names.includes(n), n);
+  assert.deepEqual(bundled.places.filter((p) => p.kind === 'outdoor').map((p) => p.id).sort(), ['daiko', 'groundgolf', 'ohagi']);
+  assert.equal(bundled.programs.length, 21);
+  assert.equal(bundled.programs.find((g) => g.title.startsWith('18 ')).startsAt, '2026-11-01T14:45+09:00');
   const admin = await f.staff('admin');
   const data = {
     venue: { name: '大垣城ホール', width: 40, depth: 28 },
@@ -395,4 +405,39 @@ test('アンケート：年代・性別・満足度をコードで保存し、�
   const v = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
   await f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 3 } });
   assert.equal((await f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 3 } })).json.error, 'ALREADY_ANSWERED');
+});
+
+test('カメラ画面：紙カードの判定とデジタルQRを振り分けた台の確認待ちに置き、玉の色は候補として出すだけ', async (t) => {
+  const f = await makeApp();
+  t.after(() => f.close());
+  const admin = await f.staff('admin');
+  await f.setupInventory(admin);
+  const pc = await f.staff('printer');
+  const paper = await f.req('POST', '/api/camera/card-read', { cookie: pc, body: { machineId: 'garagara-2', kind: 'paper', cells: [true, true, true, false, true, null, false, false, true], cornerPresent: true } });
+  assert.equal(paper.status, 200, JSON.stringify(paper.json));
+  assert.equal(paper.json.preview.lines, 2);
+  assert.equal(paper.json.preview.unsure, 1);
+  const view = (await f.req('GET', '/api/staff/view', { cookie: admin })).json;
+  const m2 = view.machines.find((m) => m.id === 'garagara-2');
+  assert.equal(m2.device.pendingRead.readId, paper.json.readId);
+  assert.equal(m2.device.pendingRead.preview.draws, 1);
+  // digital: claim verified, unused card with lines only
+  const tokens = f.stampPoints();
+  const visitor = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
+  const empty = f.svc.cards.getCardView(f.svc.cards.cardFromToken(visitor.split('=')[1]));
+  assert.equal((await f.req('POST', '/api/camera/card-read', { cookie: pc, body: { machineId: 'garagara-1', kind: 'digital', qrPayload: empty.qrPayload } })).json.error, 'NO_LINES');
+  for (const i of [0, 1, 2]) await f.req('POST', '/api/visitor/stamps', { cookie: visitor, body: { payload: `MARUGOTO2026:STAMP:${tokens[i]}`, cellIndex: i } });
+  const dig = await f.req('POST', '/api/camera/card-read', { cookie: pc, body: { machineId: 'garagara-1', kind: 'digital', qrPayload: empty.qrPayload } });
+  assert.equal(dig.status, 200);
+  assert.equal(dig.json.preview.draws, 1);
+  const acc = await f.req('POST', '/api/staff/cards/accept', { cookie: admin, body: { kind: 'digital', readId: dig.json.readId, machineId: 'garagara-1', expectedMachineRevision: f.svc.draw.getState().machines['garagara-1'].revision, operationId: f.op() } });
+  assert.equal(acc.status, 200, JSON.stringify(acc.json));
+  // ball hint
+  const hint = await f.req('POST', '/api/camera/hint', { cookie: pc, body: { machineId: 'garagara-1', color: 'green', confidence: 0.7 } });
+  assert.equal(hint.status, 200);
+  const v2 = (await f.req('GET', '/api/staff/view', { cookie: admin })).json;
+  assert.equal(v2.machines[0].device.hints[0].color, 'green');
+  assert.equal(f.svc.draw.getState().sessions[acc.json.result.sessionId].balls.length, 0, 'a hint never records a ball');
+  const visitorCookie = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
+  assert.equal((await f.req('POST', '/api/camera/hint', { cookie: visitorCookie, body: { machineId: 'garagara-1', color: 'red' } })).status, 401);
 });
