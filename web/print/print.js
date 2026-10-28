@@ -2,10 +2,15 @@ import { getJson, operationId, postJson, sendWithRetry } from '../shared/api.js'
 import { $, $$, COLOR_LABELS, fmtDateTime, fmtTime, html, render, toast } from '../shared/html.js';
 import { openStream } from '../shared/stream.js';
 
-// Print station. Any staff device can run it: the Windows PC (Chrome with
-// --kiosk-printing prints without a dialog) or the iPad / Pixel tablet (the
-// OS print dialog appears and the operator taps 印刷). Each device chooses
-// which machine's vouchers it prints. Before printing, the device claims the
+// Print station. The voucher printer is an SII MP-B20 (58 mm, USB/Bluetooth,
+// no Wi-Fi). Browser printing reaches it only through the Windows printer
+// driver, so the Windows PC (Chrome with --kiosk-printing) is the print
+// station. On the iPad and Pixel tablet auto-print is off, because iOS/Android
+// standard printing is not known to reach this printer and an auto-claimed
+// job would be lost; manual printing stays available for real-device tests.
+// TODO(DECISION-printer): SII URL Print Agent / Web SDK Server integration
+// needs SII's API guide.
+// Each device chooses which machine's vouchers it prints. Before printing, the device claims the
 // job on the server, so two devices never print the same job.
 // "印刷指示済み" only means window.print() returned; a person still confirms
 // the paper came out (§15 C13).
@@ -22,8 +27,7 @@ try {
   for (const id of JSON.parse(sessionStorage.getItem('mb-printed') ?? '[]')) st.printed.add(id);
 } catch { /* storage unavailable */ }
 
-const paper = () => (pref('mb-paper', '58') === '80' ? '80' : '58');
-const auto = () => pref('mb-auto', '0') === '1';
+const auto = () => !mobileOs && pref('mb-auto', '0') === '1';
 const station = () => pref('mb-station', '');
 function target() {
   const v = pref('mb-target', '');
@@ -31,13 +35,13 @@ function target() {
   // An operator's device prints its own machine by default; others print all.
   return st.me?.staff.role === 'operator' && st.me.machineId ? st.me.machineId : 'all';
 }
-function applyPaper() { $('#paper-css').href = `/print/paper-${paper()}.css`; }
+// iPadOS reports itself as a Mac, so touch points are checked too.
+const mobileOs = /iPhone|iPad|Android/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const mine = (j) => target() === 'all' || j.machineId === target();
 
 async function boot() {
   try { st.me = await getJson('/api/staff/me'); } catch { /* not logged in */ }
   if (!st.me) return login();
-  applyPaper();
   openStream('/api/stream/print', {
     onView: (v) => { st.jobs = v.jobs; draw(); pump(); },
     onStatus: (s) => { $('#conn').textContent = s === 'online' ? '● 接続中' : '● 再接続中…'; $('#conn').className = `conn conn-${s}`; },
@@ -73,12 +77,11 @@ function draw() {
           <option value="all" ${target() === 'all' ? 'selected' : ''}>すべての台</option>
           ${st.me.machines.map((m) => html`<option value="${m.id}" ${target() === m.id ? 'selected' : ''}>${m.name}の券だけ</option>`)}
         </select>
-        <label class="row"><input type="checkbox" id="auto" ${auto() ? 'checked' : ''}> 届いたら自動で印刷する</label>
-        <label class="row">用紙幅
-          <select id="paper"><option value="58" ${paper() === '58' ? 'selected' : ''}>58mm</option><option value="80" ${paper() === '80' ? 'selected' : ''}>80mm</option></select></label>
+        <label class="row"><input type="checkbox" id="auto" ${auto() ? 'checked' : ''} ${mobileOs ? 'disabled' : ''}> 届いたら自動で印刷する</label>
       </div>
       ${station() ? '' : html`<p class="notice">端末の名前を入れてください。別の端末と同じ券を印刷しないよう、印刷を引き受けた端末名を記録します。</p>`}
-      <p class="muted small">プリンター機種と用紙幅は未確定です。iPad や Pixel タブレットでは、印刷のたびに印刷画面が開くので「プリント」を押してください。</p>
+      ${mobileOs ? html`<p class="notice notice-danger">iPad／Androidタブレットでは自動印刷を止めています。MP-B20 は AirPrint や Android の標準印刷への対応が確認できず、印刷画面にプリンターが出ない可能性が高いためです。通常は WindowsPC の発券画面が印刷します。この端末の「この端末で印刷」は、実機で印刷できることを確かめた場合だけ使ってください。紙が出なかったら「出ない（再印刷）」を押すと、WindowsPC が刷り直します。</p>`
+    : html`<p class="muted small">プリンター：SII MP-B20（58mm、印字幅48mm）。Windows の通常使うプリンターを MP-B20 にし、Chrome を --kiosk-printing 付きで起動すると確認画面なしで印刷します。</p>`}
     </section>
     <section class="panel"><h2>印刷待ち（${queued.length}）</h2>
       ${queued.length ? '' : html`<p class="muted">ありません${others ? `（ほかの台の券 ${others} 件は別の端末が担当）` : ''}</p>`}
@@ -98,7 +101,6 @@ function draw() {
   $('#station').addEventListener('change', (e) => { setPref('mb-station', e.target.value.trim()); draw(); pump(); });
   $('#target').addEventListener('change', (e) => { setPref('mb-target', e.target.value); draw(); pump(); });
   $('#auto').addEventListener('change', (e) => { setPref('mb-auto', e.target.checked ? '1' : '0'); pump(); });
-  $('#paper').addEventListener('change', (e) => { setPref('mb-paper', e.target.value); applyPaper(); });
   for (const b of $$('[data-print]')) b.addEventListener('click', () => printJob(st.jobs.find((j) => j.jobId === b.dataset.print)));
   for (const b of $$('[data-ok]')) b.addEventListener('click', () => report(b.dataset.s, b.dataset.ok, 'confirmed'));
   for (const b of $$('[data-ng]')) b.addEventListener('click', () => report(b.dataset.s, b.dataset.ng, 'failed'));

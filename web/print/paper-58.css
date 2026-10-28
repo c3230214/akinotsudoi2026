@@ -1,3 +1,6 @@
-/* 58 mm roll: about 48 mm printable. TODO(DECISION-printer): model and width unconfirmed. */
-@page { size: 58mm auto; margin: 3mm 5mm; }
+/* SII MP-B20: 58 mm thermal roll, 48 mm print width (maker spec).
+   The roll length comes from the printer driver's paper setting (58 mm roll),
+   so only the side margins and content width are fixed here. */
+@page { margin: 2mm 5mm; }
+html, body { background: #fff !important; }
 .receipt { width: 48mm; }

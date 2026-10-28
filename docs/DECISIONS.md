@@ -53,8 +53,9 @@ Related tests:
 | U03 | USER-REQUESTED | 来場者のスマホ画面はスクロール不要の1画面構成。受付用QR、ブース詳細、一覧はダイアログで開く | `web/visitor/` |
 | U04 | USER-REQUESTED | デジタルカードの外観は紙カード画像を基準にする。既存Webアプリのスクリーンショットと矛盾する点（マスの文言など）は紙カードと指示を優先し、下部タブ、ブース選択欄、体験済の印は取り入れた | `web/visitor/card.js` |
 | U05 | USER-REQUESTED | 2026-10-28 構成変更。スタッフ側にWindowsPC、iPad（ガラガラ1）、Pixelタブレット（ガラガラ2）を置き、来場者向けの案内iPadを廃止。案内画面とペアリング機能を削除し、migration 002で未使用テーブルを削除した（仕様書§9の`/kiosk/`と受入試験14は対象外になる） | `web/kiosk` 削除 |
-| U06 | USER-REQUESTED | 引換券はWindowsPCまたはiPadから無線でエプソン製プリンターへ印刷する。発券画面を任意のスタッフ端末で開けるようにし、印刷前にジョブを引き受ける（claimed）手順を加えて二重印刷を防ぐ。プリンター型番、接続方式（AirPrint、Windowsドライバー、ePOS等）、用紙は未確認 | `finish.js`、`web/print/` |
-| U07 | OPEN | カメラ合計3台の内訳と接続先（C1とC2×2をWindowsPCにUSB接続するのか、iPadやPixelの内蔵カメラを使うのか）が未確認。現実装はC1とC2を会場PCの検出プログラムから受ける前提のまま | 確認後に判断 |
+| U06 | USER-REQUESTED | 引換券プリンターは購入済みの MP-B20（2026-10-28 ユーザー回答）。利用者は「エプソン」と説明したが、MP-B20 はセイコーインスツル（SII）の製品として販売されているため、実機の銘板で確認が必要。販売情報では用紙幅58mm、印字幅48mm、接続はUSBとBluetoothのみでWi-Fiはない。iPhone、iPad、Androidから印刷するにはSIIの印刷機能を組み込んだアプリが必要とされ、AirPrintやAndroid標準印刷への対応は確認できなかった。そこで印刷はWindowsPC（SIIのWindowsドライバー、Chromeの `--kiosk-printing`）を主とし、iPadとPixelタブレットは自動印刷を無効、手動印刷のみ残した。発券画面は印刷前にジョブを引き受け（claimed）、二重印刷を防ぐ | `finish.js`、`web/print/` |
+| U06a | OPEN | Pixelタブレットからの印刷（2026-10-28 ユーザー指示）。SIIの Web SDK Server（Android）または URL Print Agent（iOS、Android）と連携すれば可能性があるが、APIの資料を確認できておらず未実装。Bluetooth接続のプリンターは、一般に同時に1台の端末としかつながらないため、WindowsPCと共用すると切替の手間と失敗が増える可能性がある | 資料入手と実機確認が必要 |
+| U07 | USER-REQUESTED | カメラ3台（C1カード1台、C2玉2台）はWindowsPCに接続する（2026-10-28 ユーザー回答）。現実装の前提（会場PCの検出プログラムが機器APIへ送信）と一致する。プリンターもUSBで同じPCにつなぐ場合、USB帯域と給電の競合をリハーサルで確認する | `docs/device-api.md` |
 | C01 | PROVISIONAL | 心拍が必要なのは自動読取モードの台だけ（`heartbeatPolicy: auto_only`）。管理画面で「常に必要」「不要」に切替可能 | 管理タブ、`state.js` |
 | C02 | PROVISIONAL | 台ごとに手入力モードと自動読取モードを持ち、待機中にだけ理由付きで切り替える。手入力モード中の自動読取は記録のみで在庫と当選に数えない。自動モード中は手入力を拒否する | `balls.js` |
 | C03 | PROVISIONAL | 受付世代ID（券番号）を `GET /state` で配り、出玉イベントの `generation` と照合する。不一致は未割当、なしは要確認 | `balls.js ballDetected` |
@@ -75,4 +76,4 @@ Related tests:
 | C24 | OPEN | 5分ごとのVACUUM INTOバックアップと288世代保持（約1日）を雛形にした。許容損失と復元後の手順は未決定 | `deploy/` |
 | C25 | OPEN | 公開ドメイン未確定。`PUBLIC_ORIGIN` が仮の値だと本番起動を拒否する | 環境変数 |
 | 技術 | PROVISIONAL | SQLiteは `better-sqlite3` ではなくNode.js内蔵の `node:sqlite` を使う。ネイティブビルドが不要でZIP移設に向くため。Node.js 22.13以上が必要で、22では実験的機能の扱い | `package.json engines` |
-| 印刷 | OPEN | プリンター機種と用紙幅は未確定。発券画面で58mmと80mmを切り替えられる | 実機確認が必要 |
+| 印刷 | PROVISIONAL | MP-B20に合わせ、券のレイアウトを58mm用紙、印字幅48mmに固定した。実機での印字位置、日本語とQRの印字品質は未確認 | `web/print/paper-58.css` |
