@@ -19,6 +19,7 @@ import { staffRoutes } from './http/routes/staff.js';
 import { adminRoutes } from './http/routes/admin.js';
 import { deviceRoutes } from './http/routes/device.js';
 import { streamRoutes } from './http/routes/stream.js';
+import { basicAuthHook, panelRoutes } from './http/routes/panel.js';
 import { nowJst } from './time.js';
 
 const require_ = createRequire(import.meta.url);
@@ -34,7 +35,7 @@ export function createServices({ config, db, clock = nowJst }) {
   const auth = createAuthService({ db, clock, machineExists: (id) => Boolean(draw.getState().machines[id]) });
   const maps = createMapService({ db, clock });
   const surveys = createSurveyService({ db, clock });
-  const notices = createNoticeService({ db, clock, eventDate: () => draw.getState().settings.heldOn });
+  const notices = createNoticeService({ db, clock, eventDate: () => draw.getState().settings.heldOn, intakeClosed: () => draw.getState().intakeClosed });
   return { db, bus, draw, cards, devices, auth, maps, surveys, notices, clock };
 }
 
@@ -54,9 +55,12 @@ export function buildApp({ config, db = null, clock = nowJst, logger = false, se
   });
 
   const originHook = verifyOrigin(config);
-  app.addHook('onRequest', async (request) => {
+  const panelAuth = basicAuthHook(config);
+  app.addHook('onRequest', async (request, reply) => {
     const url = request.url;
-    // Cookie-authenticated browser APIs; device API is excluded on purpose.
+    // Basic-auth administrator panel: the page and its API.
+    if (url === '/admin' || url.startsWith('/admin/') || url.startsWith('/api/panel/')) await panelAuth(request, reply);
+    // Browser APIs (Cookie or Basic); the Bearer device API is excluded on purpose.
     if (url.startsWith('/api/') && !url.startsWith('/api/device/')) await originHook(request);
   });
 
@@ -71,6 +75,7 @@ export function buildApp({ config, db = null, clock = nowJst, logger = false, se
     adminRoutes(scope, svc);
     deviceRoutes(scope, svc);
     streamRoutes(scope, { ...svc, config });
+    panelRoutes(scope, svc);
   });
 
   if (config.webDir && fs.existsSync(config.webDir)) {

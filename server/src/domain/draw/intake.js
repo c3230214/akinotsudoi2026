@@ -3,6 +3,7 @@ import { fail, invalid } from '../errors.js';
 import { COLOR_LABELS, availablePrizes, isStopped, machineOf } from './state.js';
 
 export function requireIntakeAllowed(s, machine, ctx) {
+  if (s.intakeClosed?.closed) fail('INTAKE_CLOSED', `新規受付は終了しています（${s.intakeClosed.reason}）`);
   if (!s.inventoryConfigured) fail('INVENTORY_NOT_CONFIGURED', '玉と景品の初期在庫が登録されていません。管理者が在庫を登録してください');
   if (machine.emergency) fail('EMERGENCY_STOPPED', `${machine.name}は緊急停止中です`);
   if (machine.resumeRequired) fail('RESUME_REQUIRED', `${machine.name}は停止解除後の再開操作が必要です`);

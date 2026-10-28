@@ -13,7 +13,7 @@ export const NOTICE_KINDS = Object.freeze({
 const DEFAULT_CONFIG = Object.freeze({ enabled: true, reception: '14:30', draw: '15:00' });
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-export function createNoticeService({ db, clock, eventDate }) {
+export function createNoticeService({ db, clock, eventDate, intakeClosed = () => null }) {
   function getConfig() {
     const r = db.prepare("SELECT value FROM meta WHERE key = 'notice_config'").get();
     return r ? { ...DEFAULT_CONFIG, ...JSON.parse(r.value) } : { ...DEFAULT_CONFIG };
@@ -39,7 +39,8 @@ export function createNoticeService({ db, clock, eventDate }) {
     const notices = cfg.enabled ? Object.entries(NOTICE_KINDS).map(([id, k]) => ({
       id, label: k.label, ruby: k.ruby, time: cfg[id], at: `${day}T${cfg[id]}:00+09:00`,
     })).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)) : [];
-    return { now: clock(), notices };
+    const closed = intakeClosed();
+    return { now: clock(), notices, intakeClosed: closed?.closed ? { reason: closed.reason, at: closed.at } : null };
   }
 
   return { getConfig, setConfig, publicNotices };

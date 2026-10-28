@@ -53,31 +53,35 @@ export function adminRoutes(app, { auth, draw, maps, surveys, notices, db }) {
   app.put('/api/admin/survey-config', { preHandler: admin }, async (request) => surveys.setConfig(request.body, staffActor(request.staffAuth)));
   app.get('/api/admin/surveys/summary', { preHandler: admin }, async () => surveys.summary());
 
-  app.get('/api/admin/export/audit.csv', { preHandler: admin }, async (_request, reply) => {
-    const rows = [];
-    let before = null;
-    for (;;) {
-      const page = listActionLog(db, { before, limit: 500 });
-      if (!page.length) break;
-      rows.push(...page);
-      before = page[page.length - 1].seq;
-    }
-    rows.reverse();
-    const csv = toCsv(['seq', 'at', 'actor', 'role', 'type', 'result', 'message', 'action', 'revision'],
-      rows.map((r) => [r.seq, r.at, r.actor.name ?? r.actor.id ?? r.actor.kind, r.actor.role ?? r.actor.kind, r.type, r.result, r.message, r.action, r.revisionAfter]));
-    return reply.type('text/csv; charset=utf-8').header('Content-Disposition', 'attachment; filename="audit.csv"').send(csv);
-  });
+  app.get('/api/admin/export/audit.csv', { preHandler: admin }, async (_request, reply) => sendCsv(reply, 'audit.csv', auditCsv(db)));
+  app.get('/api/admin/export/sessions.csv', { preHandler: admin }, async (_request, reply) => sendCsv(reply, 'sessions.csv', sessionsCsv(draw.getState())));
+}
 
-  app.get('/api/admin/export/sessions.csv', { preHandler: admin }, async (_request, reply) => {
-    const s = draw.getState();
-    const rows = s.sessionOrder.map((id) => {
-      const x = s.sessions[id];
-      const balls = x.balls.filter((b) => !b.removed);
-      return [id, x.machineId, x.card.kind, x.lines, x.n, x.status, x.createdAt, x.createdBy, x.finalizedAt,
-        balls.map((b) => `${b.order}:${b.color ?? '?'}:${b.kind}:${b.source}`).join(' '),
-        x.voucher?.prizes.map((p) => `${p.grade}等`).join(' ') ?? '', x.voucher?.printStatus ?? '', x.voucher?.redeemedAt ?? '', x.intake?.correctionReason ?? '', x.intake?.cornerReason ?? ''];
-    });
-    const csv = toCsv(['voucher', 'machine', 'cardKind', 'lines', 'n', 'status', 'createdAt', 'createdBy', 'finalizedAt', 'balls', 'prizes', 'print', 'redeemedAt', 'correctionReason', 'cornerReason'], rows);
-    return reply.type('text/csv; charset=utf-8').header('Content-Disposition', 'attachment; filename="sessions.csv"').send(csv);
+export function sendCsv(reply, name, csv) {
+  return reply.type('text/csv; charset=utf-8').header('Content-Disposition', `attachment; filename="${name}"`).send(csv);
+}
+
+export function auditCsv(db) {
+  const rows = [];
+  let before = null;
+  for (;;) {
+    const page = listActionLog(db, { before, limit: 500 });
+    if (!page.length) break;
+    rows.push(...page);
+    before = page[page.length - 1].seq;
+  }
+  rows.reverse();
+  return toCsv(['seq', 'at', 'actor', 'role', 'type', 'result', 'message', 'action', 'revision'],
+    rows.map((r) => [r.seq, r.at, r.actor.name ?? r.actor.id ?? r.actor.kind, r.actor.role ?? r.actor.kind, r.type, r.result, r.message, r.action, r.revisionAfter]));
+}
+
+export function sessionsCsv(s) {
+  const rows = s.sessionOrder.map((id) => {
+    const x = s.sessions[id];
+    const balls = x.balls.filter((b) => !b.removed);
+    return [id, x.machineId, x.card.kind, x.lines, x.n, x.status, x.createdAt, x.createdBy, x.finalizedAt,
+      balls.map((b) => `${b.order}:${b.color ?? '?'}:${b.kind}:${b.source}`).join(' '),
+      x.voucher?.prizes.map((p) => `${p.grade}等`).join(' ') ?? '', x.voucher?.printStatus ?? '', x.voucher?.redeemedAt ?? '', x.intake?.correctionReason ?? '', x.intake?.cornerReason ?? ''];
   });
+  return toCsv(['voucher', 'machine', 'cardKind', 'lines', 'n', 'status', 'createdAt', 'createdBy', 'finalizedAt', 'balls', 'prizes', 'print', 'redeemedAt', 'correctionReason', 'cornerReason'], rows);
 }

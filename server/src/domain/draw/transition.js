@@ -9,7 +9,7 @@ import {
 import {
   addRefillPlan, adjustInventory, refillPlanned, returnBalls, setInputMode, setInventory,
 } from './inventory.js';
-import { clearEmergency, emergencyStop, resumeDrawing } from './safety.js';
+import { clearEmergency, emergencyStop, resumeDrawing, setIntakeClosed } from './safety.js';
 import { updateSettings } from './settings.js';
 
 export const HANDLERS = Object.freeze({
@@ -35,6 +35,7 @@ export const HANDLERS = Object.freeze({
   emergencyStop,
   clearEmergency,
   resumeDrawing,
+  setIntakeClosed,
   updateSettings,
 });
 

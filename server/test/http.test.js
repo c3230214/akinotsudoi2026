@@ -321,3 +321,37 @@ test('終了案内：初期値はPOPどおり受付14:30と抽選15:00（開催�
   await f.req('PUT', '/api/admin/notice-config', { cookie: admin, body: { enabled: false, reception: '14:45', draw: '15:10' } });
   assert.equal((await f.req('GET', '/api/notices', { origin: null })).json.notices.length, 0);
 });
+
+test('管理パネル：ベーシック認証、受付終了で両台の受付を拒否し来場者に案内、他サイトからの変更は拒否', async (t) => {
+  const f = await makeApp({ env: { ADMIN_PANEL_USER: 'paneluser', ADMIN_PANEL_PASSWORD: 'panel-pass-1' } });
+  t.after(() => f.close());
+  const basic = (u, p) => ({ authorization: `Basic ${Buffer.from(`${u}:${p}`).toString('base64')}` });
+  const none = await f.req('GET', '/api/panel/summary', { origin: null });
+  assert.equal(none.status, 401);
+  assert.match(String(none.res.headers['www-authenticate']), /^Basic realm=/);
+  assert.equal((await f.req('GET', '/api/panel/summary', { origin: null, headers: basic('paneluser', 'wrong') })).status, 401);
+  const ok = await f.req('GET', '/api/panel/summary', { origin: null, headers: basic('paneluser', 'panel-pass-1') });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.json.prizes.length, 4);
+  assert.equal((await f.req('GET', '/admin/', { origin: null })).status, 401);
+  // CSRF: the browser re-sends Basic credentials, so the Origin check must still apply.
+  const evil = await f.req('POST', '/api/panel/intake', { origin: 'https://evil.example', headers: basic('paneluser', 'panel-pass-1'), body: { closed: true, operationId: f.op() } });
+  assert.equal(evil.status, 403);
+  const close = await f.req('POST', '/api/panel/intake', { headers: basic('paneluser', 'panel-pass-1'), body: { closed: true, operationId: f.op() } });
+  assert.equal(close.status, 200);
+  const notice = (await f.req('GET', '/api/notices', { origin: null })).json;
+  assert.equal(notice.intakeClosed.reason, '景品がなくなったため');
+  const admin = await f.staff('admin');
+  await f.setupInventory(admin);
+  const rev = f.svc.draw.getState().machines['garagara-1'].revision;
+  const acc = await f.req('POST', '/api/staff/cards/accept', { cookie: admin, body: { kind: 'paper', machineId: 'garagara-1', expectedMachineRevision: rev, operationId: f.op(), marks: ONE_LINE, cornerPresent: true } });
+  assert.equal(acc.json.error, 'INTAKE_CLOSED');
+  const logs = await f.req('GET', '/api/panel/logs', { origin: null, headers: basic('paneluser', 'panel-pass-1') });
+  assert.ok(logs.json.rows.some((r) => r.type === 'setIntakeClosed' && r.actor.name === '管理パネル'));
+});
+
+test('管理パネルは資格情報が未設定なら無効（404）', async (t) => {
+  const f = await makeApp();
+  t.after(() => f.close());
+  assert.equal((await f.req('GET', '/api/panel/summary', { origin: null })).status, 404);
+});

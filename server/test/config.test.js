@@ -49,3 +49,9 @@ test('config rejects invalid port, environment and public origin', () => {
   assert.throws(() => loadConfig({ PUBLIC_ORIGIN: 'file:///tmp/app' }), /http or https/);
   assert.throws(() => loadConfig({ IMAGE_RETENTION_DAYS: '0' }), /IMAGE_RETENTION_DAYS/);
 });
+
+test('管理パネルのIDとパスワードは両方そろえて設定する', () => {
+  assert.throws(() => loadConfig({ ADMIN_PANEL_USER: 'a' }), /set together/);
+  assert.throws(() => loadConfig({ ADMIN_PANEL_USER: 'a:b', ADMIN_PANEL_PASSWORD: 'longenough' }), /must not contain/);
+  assert.equal(loadConfig({ ADMIN_PANEL_USER: 'u', ADMIN_PANEL_PASSWORD: 'longenough' }).panelUser, 'u');
+});

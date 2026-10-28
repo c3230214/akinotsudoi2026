@@ -34,3 +34,21 @@ export function resumeDrawing(s, a) {
   m.resumeRequired = false;
   return { touched: [m.id], message: `${m.name}を再開しました`, result: {} };
 }
+
+export const DEFAULT_INTAKE_CLOSED_REASON = '景品がなくなったため';
+
+/**
+ * Close or reopen new intake on every machine. Sessions already running,
+ * printing and redeeming continue; only startSession is refused.
+ */
+export function setIntakeClosed(s, a, ctx) {
+  if (typeof a.closed !== 'boolean') invalid('closed must be true or false');
+  if (a.closed) {
+    const reason = typeof a.reason === 'string' && a.reason.trim() ? a.reason.trim().slice(0, 100) : DEFAULT_INTAKE_CLOSED_REASON;
+    s.intakeClosed = { closed: true, reason, at: ctx.now, by: ctx.actor?.name ?? null };
+    return { touched: Object.keys(s.machines), message: `新規受付を終了しました（${reason}）`, result: { closed: true } };
+  }
+  if (!s.intakeClosed?.closed) fail('NOT_CLOSED', '新規受付は終了していません');
+  s.intakeClosed = { closed: false, reason: null, at: ctx.now, by: ctx.actor?.name ?? null };
+  return { touched: Object.keys(s.machines), message: '新規受付を再開しました', result: { closed: false } };
+}

@@ -29,6 +29,7 @@ export const COMMAND_ROLES = Object.freeze({
   adjustInventory: ['admin'],
   addRefillPlan: ['admin'],
   updateSettings: ['admin'],
+  setIntakeClosed: ['admin'],
 });
 
 const BODY_LIMIT_KEYS = 40;

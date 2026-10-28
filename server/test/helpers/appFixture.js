@@ -12,9 +12,9 @@ import { nowJst } from '../../src/time.js';
 
 export const ORIGIN = 'https://bingo.test';
 
-export async function makeApp({ dbPath = ':memory:', clock = nowJst } = {}) {
+export async function makeApp({ dbPath = ':memory:', clock = nowJst, env = {} } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mb-test-'));
-  const config = loadConfig({ NODE_ENV: 'test', PUBLIC_ORIGIN: ORIGIN, IMAGE_DIR: path.join(dir, 'images'), WEB_DIR: path.join(dir, 'no-web') });
+  const config = loadConfig({ NODE_ENV: 'test', PUBLIC_ORIGIN: ORIGIN, IMAGE_DIR: path.join(dir, 'images'), WEB_DIR: path.join(dir, 'no-web'), ...env });
   const db = openDatabase(dbPath);
   const app = buildApp({ config, db, clock });
   await app.ready();

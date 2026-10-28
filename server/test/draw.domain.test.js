@@ -285,3 +285,17 @@ test('transitionは入力stateを変更しない', () => {
   transition(s, { type: 'setInventory', contents: {}, spare: {} }, { now: new Date().toISOString() });
   assert.deepEqual(s, copy);
 });
+
+test('景品切れで新規受付を終了すると両台の受付を拒否し、進行中の抽選と引換は続けられる', () => {
+  const w = makeWorld();
+  w.start('garagara-1', ONE_LINE);
+  w.run({ type: 'setIntakeClosed', closed: true });
+  assert.equal(w.state.intakeClosed.reason, '景品がなくなったため');
+  assert.throws(() => w.start('garagara-2', ONE_LINE), { code: 'INTAKE_CLOSED' });
+  w.ball('garagara-1', 'white');
+  w.run({ type: 'finalizeResult', machineId: 'garagara-1', sessionId: 'BM-0001', trayEmptied: true });
+  w.run({ type: 'recordPrintResult', sessionId: 'BM-0001', jobId: 'pj-1', outcome: 'dispatched' });
+  w.run({ type: 'redeemPrize', voucher: 'BM-0001' });
+  w.run({ type: 'setIntakeClosed', closed: false });
+  w.start('garagara-2', ONE_LINE);
+});

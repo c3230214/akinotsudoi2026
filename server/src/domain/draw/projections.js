@@ -115,6 +115,7 @@ export function toStaffView(s, { now, devices = {} } = {}) {
     settingsVersion: s.settingsVersion,
     settings: s.settings,
     locked: s.locked,
+    intakeClosed: s.intakeClosed ?? null,
     inventoryConfigured: s.inventoryConfigured,
     machines,
     prizes: prizeView(s),

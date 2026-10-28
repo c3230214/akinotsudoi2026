@@ -121,3 +121,8 @@ fieldset { border: 1px solid var(--line); border-radius: 10px; }
 .pop-em { color: #ff6600; text-decoration: underline; text-decoration-thickness: .6cqw; text-underline-offset: .12em; }
 .pop-em rt { color: #ff6600; }
 .pop-close { border-radius: 0; }
+.pop-reason { font-size: 6.5cqw; color: #595959; margin-bottom: 2cqw !important; }
+/* Deliberately small and low-contrast: for staff, not visitors. */
+.admin-link { display: block; width: max-content; margin: 4px 0 0 auto; padding: 2px 6px; font-size: 10px; color: #b9aea6; text-decoration: none; }
+.admin-link-map { position: absolute; right: 8px; top: 2px; margin: 0; }
+.card-bar { position: relative; }

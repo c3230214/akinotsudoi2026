@@ -58,6 +58,13 @@ export function loadConfig(env = process.env) {
   if (claimSecret.length < 32) throw new Error('CARD_CLAIM_SECRET must be at least 32 characters');
   if (production && claimSecret === DEV_CLAIM_SECRET) throw new Error('CARD_CLAIM_SECRET must be changed for production');
 
+  if (Boolean(env.ADMIN_PANEL_USER) !== Boolean(env.ADMIN_PANEL_PASSWORD)) {
+    throw new Error('ADMIN_PANEL_USER and ADMIN_PANEL_PASSWORD must be set together');
+  }
+  if (env.ADMIN_PANEL_USER && (env.ADMIN_PANEL_USER.includes(':') || env.ADMIN_PANEL_PASSWORD.length < 8)) {
+    throw new Error('ADMIN_PANEL_USER must not contain ":" and ADMIN_PANEL_PASSWORD needs 8+ characters');
+  }
+
   return Object.freeze({
     nodeEnv,
     host: env.HOST || '127.0.0.1',
@@ -70,6 +77,9 @@ export function loadConfig(env = process.env) {
     cookieSecure: parseBool(env.COOKIE_SECURE, 'COOKIE_SECURE', production),
     // Caddy on the same host: trust X-Forwarded-For only from loopback.
     trustProxy: env.TRUST_PROXY === undefined || env.TRUST_PROXY === '' ? (production ? '127.0.0.1' : false) : env.TRUST_PROXY,
+    // Basic-auth administrator panel (/admin/). Unset = panel disabled.
+    panelUser: env.ADMIN_PANEL_USER || null,
+    panelPassword: env.ADMIN_PANEL_PASSWORD || null,
     // TODO(DECISION-images): 14 days after the event is the spec's default proposal.
     imageRetentionDays: parseIntRange(env.IMAGE_RETENTION_DAYS, 'IMAGE_RETENTION_DAYS', 14, 1, 365),
   });

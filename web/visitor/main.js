@@ -76,6 +76,7 @@ function renderCard() {
       <div class="bar-buttons">
         <button type="button" class="btn btn-secondary" id="show-qr" ${c.used || c.draws === 0 ? 'disabled' : ''}>受付用QRを表示</button>
       </div>
+      <a class="admin-link" href="/admin/">管理</a>
     </div>`);
   for (const b of $$('[data-cell]', root)) b.addEventListener('click', () => openCell(Number(b.dataset.cell)));
   $('#show-qr').addEventListener('click', showQr);
@@ -270,6 +271,7 @@ async function loadNotices() {
     // Use the server clock: a visitor's phone may be set wrong.
     notice.offset = Date.parse(r.now) - Date.now();
     notice.list = r.notices;
+    notice.intakeClosed = r.intakeClosed;
     checkNotices();
   } catch { /* retried on the next interval */ }
 }
@@ -278,8 +280,20 @@ function checkNotices() {
   const now = Date.now() + notice.offset;
   const active = notice.list.filter((n) => Date.parse(n.at) <= now);
   const banner = $('#closing-banner');
-  banner.hidden = active.length === 0;
-  if (active.length) banner.textContent = `${active.map((n) => `${n.label}は${n.time}`).join('、')}で終了しました`;
+  const lines = [];
+  if (notice.intakeClosed) lines.push(`${notice.intakeClosed.reason}新規受付を終了しました`);
+  if (active.length) lines.push(`${active.map((n) => `${n.label}は${n.time}`).join('、')}で終了しました`);
+  banner.hidden = lines.length === 0;
+  banner.textContent = lines.join(' ／ ');
+  if (notice.intakeClosed) {
+    const key = `intake@${notice.intakeClosed.at}`;
+    if (!notice.shown.has(key)) {
+      notice.shown.add(key);
+      try { sessionStorage.setItem('mb-notice-shown', JSON.stringify([...notice.shown])); } catch { /* ignore */ }
+      showIntakeClosedPop(notice.intakeClosed);
+      return;
+    }
+  }
   const latest = active[active.length - 1];
   const key = latest && `${latest.id}@${latest.at}`;
   if (latest && !notice.shown.has(key)) {
@@ -287,6 +301,16 @@ function checkNotices() {
     try { sessionStorage.setItem('mb-notice-shown', JSON.stringify([...notice.shown])); } catch { /* ignore */ }
     showPop(latest);
   }
+}
+
+function showIntakeClosedPop(c) {
+  render($('#pop-text'), html`
+    <p class="pop-reason">${c.reason}</p>
+    <p class="pop-line1"><ruby>新規受付<rt>しんきうけつけ</rt></ruby>を</p>
+    <p class="pop-line2"><ruby class="pop-em">終了<rt>しゅうりょう</rt></ruby>しました</p>`);
+  const dlg = $('#pop');
+  if ($('#detail').open) $('#detail').close();
+  if (!dlg.open) dlg.showModal();
 }
 
 function showPop(n) {
@@ -302,7 +326,7 @@ function showPop(n) {
 $('[data-pop-close]').addEventListener('click', () => $('#pop').close());
 loadNotices();
 setInterval(checkNotices, 5_000);
-setInterval(loadNotices, 60_000);
+setInterval(loadNotices, 30_000);
 $('#detail [data-close]').addEventListener('click', () => $('#detail').close());
 $('#detail').addEventListener('click', (e) => { if (e.target === $('#detail')) $('#detail').close(); });
 window.addEventListener('hashchange', route);

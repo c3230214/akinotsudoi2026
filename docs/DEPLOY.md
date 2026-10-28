@@ -38,7 +38,7 @@ sudo chown root:marugoto-bingo /etc/marugoto-bingo/marugoto-bingo.env
 sudo chmod 640 /etc/marugoto-bingo/marugoto-bingo.env
 ```
 
-`PUBLIC_ORIGIN` に確定した公開URLを、`CARD_CLAIM_SECRET` に生成した値を入れます。`PUBLIC_ORIGIN` が仮の値のままだと起動を拒否します。`CARD_CLAIM_SECRET` を途中で変えると、発行済みデジタルカードの受付用QRがすべて無効になります。イベント中は変更しないでください。
+`PUBLIC_ORIGIN` に確定した公開URLを、`CARD_CLAIM_SECRET` に生成した値を入れます。管理パネル（`/admin/`）を使う場合は `ADMIN_PANEL_USER` と `ADMIN_PANEL_PASSWORD` に、運営で決めたIDとパスワードを入れます。空のままならパネルは無効です。この値はGitやZIPに含めないでください。`PUBLIC_ORIGIN` が仮の値のままだと起動を拒否します。`CARD_CLAIM_SECRET` を途中で変えると、発行済みデジタルカードの受付用QRがすべて無効になります。イベント中は変更しないでください。
 
 ## 5. 初期化（サービス起動前に1回）
 

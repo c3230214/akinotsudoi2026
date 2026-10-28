@@ -105,6 +105,8 @@ export function initialState(settingsInput = {}) {
     settings,
     locked: false,
     inventoryConfigured: false,
+    // Set by an administrator, e.g. when prizes run out. Redeeming continues.
+    intakeClosed: null,
     machines: Object.fromEntries(settings.machines.map((m) => [m.id, newMachine(m)])),
     prizes: Object.fromEntries(settings.grades.map((g) => [g.color, { allocated: 0, redeemed: 0 }])),
     spare: zeroColors(),

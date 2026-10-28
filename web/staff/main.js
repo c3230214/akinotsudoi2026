@@ -177,6 +177,7 @@ function viewDraw() {
         <h1>${m.name} <span class="chip">${m.phase === 'drawing' ? '抽選中' : '待機中'}</span> <span class="chip">${m.inputMode === 'auto' ? '自動読取モード' : '手入力モード'}</span></h1>
         <span id="queue" class="muted"></span>
       </div>
+      ${v.intakeClosed?.closed ? html`<p class="notice notice-danger">新規受付は終了しています（${v.intakeClosed.reason}）。進行中の抽選の確定と景品引換は続けられます。</p>` : ''}
       ${!v.inventoryConfigured ? html`<p class="notice notice-danger">初期在庫が未登録です。管理者が「管理」タブで登録するまで受付できません。</p>` : ''}
       ${m.emergency ? html`<p class="notice notice-danger">緊急停止中（ソフトウェア上の停止です。機械そのものは止まっていません）：${m.emergency.reason || '理由なし'}（${fmtTime(m.emergency.at)} ${m.emergency.by ?? ''}）</p>` : ''}
       ${m.resumeRequired ? html`<p class="notice">停止は解除済みです。「再開」を押すまで受付・確定はできません。</p>` : ''}

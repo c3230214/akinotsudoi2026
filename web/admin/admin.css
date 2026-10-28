@@ -1,0 +1,13 @@
+.ahead { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border-bottom: 2px solid var(--accent); }
+.ahead h1 { margin: 0; font-size: 1.15em; color: var(--accent-dark); }
+main { max-width: 900px; margin: 0 auto; padding: 0 10px 40px; }
+.intake { border-width: 3px; }
+.intake.is-open { border-color: var(--ok); }
+.intake.is-closed { border-color: var(--danger); background: #fdecea; }
+.intake .state { font-size: 1.3em; font-weight: 900; margin: 0 0 8px; }
+.intake .btn { width: 100%; min-height: 56px; font-size: 1.05em; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.stat { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px; text-align: center; }
+.stat b { display: block; font-size: 1.6em; color: var(--accent-dark); }
+.small { font-size: .85em; }
+tr.rejected td { color: var(--danger); }
