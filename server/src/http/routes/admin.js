@@ -15,7 +15,7 @@ export function toCsv(header, rows) {
   return `﻿${[header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n`;
 }
 
-export function adminRoutes(app, { auth, draw, maps, surveys, db }) {
+export function adminRoutes(app, { auth, draw, maps, surveys, notices, db }) {
   const admin = requireStaff(auth, 'admin');
 
   app.put('/api/admin/settings', { preHandler: admin, schema: { body: { type: 'object', required: ['settings'] } } }, async (request) => draw.execute({
@@ -45,6 +45,9 @@ export function adminRoutes(app, { auth, draw, maps, surveys, db }) {
 
   app.get('/api/admin/stamp-points', { preHandler: admin }, async () => ({ points: listStampPoints(db) }));
   app.get('/api/admin/cards/stats', { preHandler: admin }, async () => ({ cards: cardStats(db) }));
+
+  app.get('/api/admin/notice-config', { preHandler: admin }, async () => notices.getConfig());
+  app.put('/api/admin/notice-config', { preHandler: admin }, async (request) => notices.setConfig(request.body, staffActor(request.staffAuth)));
 
   app.get('/api/admin/survey-config', { preHandler: admin }, async () => surveys.getConfig());
   app.put('/api/admin/survey-config', { preHandler: admin }, async (request) => surveys.setConfig(request.body, staffActor(request.staffAuth)));

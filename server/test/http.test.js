@@ -305,3 +305,19 @@ test('42: VACUUM INTO のバックアップから起動すると、使用済み�
   assert.equal(after.prizes.green.allocated, 1);
   assert.ok(g.db.prepare('SELECT used_at FROM cards WHERE used_session_id = ?').get(sid).used_at);
 });
+
+test('終了案内：初期値はPOPどおり受付14:30と抽選15:00（開催日のJST）、管理者だけが変更できる', async (t) => {
+  const f = await makeApp();
+  t.after(() => f.close());
+  const r = await f.req('GET', '/api/notices', { origin: null });
+  assert.deepEqual(r.json.notices.map((n) => [n.id, n.at]), [['reception', '2026-11-01T14:30:00+09:00'], ['draw', '2026-11-01T15:00:00+09:00']]);
+  assert.ok(r.json.now);
+  const op = await f.staff('operator');
+  assert.equal((await f.req('PUT', '/api/admin/notice-config', { cookie: op, body: { enabled: true, reception: '14:00', draw: '15:00' } })).status, 403);
+  const admin = await f.staff('admin');
+  assert.equal((await f.req('PUT', '/api/admin/notice-config', { cookie: admin, body: { enabled: true, reception: '25:00', draw: '15:00' } })).status, 422);
+  assert.equal((await f.req('PUT', '/api/admin/notice-config', { cookie: admin, body: { enabled: true, reception: '14:45', draw: '15:10' } })).status, 200);
+  assert.equal((await f.req('GET', '/api/notices', { origin: null })).json.notices[0].time, '14:45');
+  await f.req('PUT', '/api/admin/notice-config', { cookie: admin, body: { enabled: false, reception: '14:45', draw: '15:10' } });
+  assert.equal((await f.req('GET', '/api/notices', { origin: null })).json.notices.length, 0);
+});

@@ -12,6 +12,7 @@ import { createDeviceService } from './services/deviceService.js';
 import { createAuthService } from './services/authService.js';
 import { createMapService } from './services/mapService.js';
 import { createSurveyService } from './services/surveyService.js';
+import { createNoticeService } from './services/noticeService.js';
 import { errorHandler, securityHeaders, verifyOrigin } from './http/security.js';
 import { visitorRoutes } from './http/routes/visitor.js';
 import { staffRoutes } from './http/routes/staff.js';
@@ -33,7 +34,8 @@ export function createServices({ config, db, clock = nowJst }) {
   const auth = createAuthService({ db, clock, machineExists: (id) => Boolean(draw.getState().machines[id]) });
   const maps = createMapService({ db, clock });
   const surveys = createSurveyService({ db, clock });
-  return { db, bus, draw, cards, devices, auth, maps, surveys, clock };
+  const notices = createNoticeService({ db, clock, eventDate: () => draw.getState().settings.heldOn });
+  return { db, bus, draw, cards, devices, auth, maps, surveys, notices, clock };
 }
 
 export function buildApp({ config, db = null, clock = nowJst, logger = false, services = null } = {}) {
@@ -81,7 +83,7 @@ export function buildApp({ config, db = null, clock = nowJst, logger = false, se
       redirect: true,
       setHeaders(reply, filePath) {
         // Small no-build app: always revalidate so a deploy is picked up at once.
-        reply.header('Cache-Control', /\.(png|jpe?g|svg|woff2?)$/.test(filePath) ? 'public, max-age=3600' : 'no-cache');
+        reply.header('Cache-Control', /\.(png|jpe?g|webp|svg|woff2?)$/.test(filePath) ? 'public, max-age=3600' : 'no-cache');
       },
     });
     const jsqr = require_.resolve('jsqr/dist/jsQR.js');

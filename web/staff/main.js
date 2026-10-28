@@ -460,6 +460,7 @@ function viewAdmin() {
         <button class="btn btn-secondary" data-act="loadStaff">スタッフ一覧</button>
         <a class="btn btn-plain" href="/api/admin/export/sessions.csv">抽選結果CSV</a>
         <a class="btn btn-plain" href="/api/admin/export/audit.csv">操作履歴CSV</a>
+        <button class="btn btn-secondary" data-act="loadNotice">終了案内の時刻</button>
         <button class="btn btn-secondary" data-act="loadSurvey">アンケート設定・集計</button>
         <button class="btn btn-secondary" data-act="loadMap">マップデータ</button>
         ${s.allowManualVoucher ? html`<button class="btn btn-secondary" data-act="manualVoucher">手書き券を記録</button>` : ''}
@@ -720,6 +721,24 @@ async function adminAct(name) {
         });
         for (const b of $$('[data-staff-toggle]', pane())) b.addEventListener('click', async () => { try { await api('PATCH', `/api/admin/staff/${b.dataset.staffToggle}`, { active: b.dataset.active !== 'true' }); adminAct('loadStaff'); } catch (error) { showError(error); } });
         for (const b of $$('[data-staff-pass]', pane())) b.addEventListener('click', async () => { const p = window.prompt('新しいパスコード（8文字以上）'); if (!p) return; try { await api('PATCH', `/api/admin/staff/${b.dataset.staffPass}`, { passcode: p }); toast('変更しました', { kind: 'ok' }); } catch (error) { showError(error); } });
+      } catch (error) { showError(error); }
+      break;
+    }
+    case 'loadNotice': {
+      try {
+        const cfg = await getJson('/api/admin/notice-config');
+        render(pane(), html`<h3>来場者画面の終了案内（POPと同じ表示）</h3>
+          <p class="muted">時刻になると来場者のスマホにPOPと同じ案内が出ます。案内を出すだけで、受付や抽選を止めはしません。日付はイベント設定の開催日（${v.settings.heldOn}）です。</p>
+          <label class="check"><input type="checkbox" id="nc-enabled" ${cfg.enabled ? raw('checked') : ''}> 案内を出す</label>
+          <div class="row"><label for="nc-reception">受付の終了</label><input id="nc-reception" type="time" value="${cfg.reception}">
+          <label for="nc-draw">抽選の終了</label><input id="nc-draw" type="time" value="${cfg.draw}"></div>
+          <button class="btn" id="nc-save">保存</button>`);
+        $('#nc-save').addEventListener('click', async () => {
+          try {
+            await api('PUT', '/api/admin/notice-config', { enabled: $('#nc-enabled').checked, reception: $('#nc-reception').value, draw: $('#nc-draw').value });
+            toast('保存しました', { kind: 'ok' });
+          } catch (error) { showError(error); }
+        });
       } catch (error) { showError(error); }
       break;
     }

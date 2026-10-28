@@ -5,7 +5,7 @@ import { createRateLimiter } from '../../services/rateLimiter.js';
 
 const CARD_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
-export function visitorRoutes(app, { cards, maps, surveys, config }) {
+export function visitorRoutes(app, { cards, maps, surveys, notices, config }) {
   // TODO(DECISION-C23): limits are proposals; carrier NAT can put many
   // visitors behind one IP, so the IP limit is generous and the per-card
   // limit is the tighter one.
@@ -65,6 +65,11 @@ export function visitorRoutes(app, { cards, maps, surveys, config }) {
   }, async (request) => {
     const card = requireCard(request);
     return surveys.submit(card.id, request.body);
+  });
+
+  app.get('/api/notices', async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return notices.publicNotices();
   });
 
   app.get('/api/map', async (_request, reply) => {

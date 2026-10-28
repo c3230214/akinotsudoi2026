@@ -13,42 +13,26 @@ main { flex: 1; min-height: 0; position: relative; }
 .small { font-size: .85em; }
 .start { margin: auto 0; text-align: center; padding: 8px; }
 
-/* ---------- bingo card: scaled to fit the available height ---------- */
+/* ---------- bingo card: the organisers' design image, scaled to fit ---------- */
 .card-fit { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: flex-start; container-type: size; }
-/* the card is about 1.5x as tall as wide */
-.bingo-card { container-type: inline-size; position: relative; width: min(100cqw, 62cqh); background: #fff; border-radius: 12px; padding: 4cqw 3cqw 3cqw; overflow: hidden; box-shadow: 0 2px 10px rgba(80, 40, 10, .12); }
-.deco { position: absolute; pointer-events: none; }
-.deco-tl { top: -1.5cqw; left: -1.5cqw; width: 20cqw; height: 20cqw; }
-.deco svg { width: 100%; height: 100%; }
-.card-title { text-align: center; position: relative; z-index: 1; }
-.card-title .t1 { margin: 0; font-size: 12cqw; color: var(--accent); font-weight: 900; letter-spacing: .04em; line-height: 1.25; }
-.card-title .t2 { margin: 0; font-size: 8.6cqw; color: var(--accent); font-weight: 900; line-height: 1.3; }
-.card-title rt { font-size: .38em; color: var(--accent); }
-.band { display: inline-block; margin: 1.5cqw 0 2.5cqw; padding: 1cqw; background: var(--band); border-radius: 999px; }
-.band span { display: inline-block; padding: .6cqw 4.5cqw; border: 2px dotted #fff; border-radius: 999px; color: #111; font-weight: 800; font-size: 4.8cqw; }
-.band rt { font-size: .5em; color: #111; }
-
-.corner { position: absolute; top: 0; right: 0; width: 24cqw; height: 24cqw; z-index: 2; }
-.corner-line { position: absolute; inset: 0; width: 100%; height: 100%; }
-.corner-label { position: absolute; top: 4.5cqw; right: -.5cqw; transform: rotate(45deg); font-weight: 900; font-size: 3.8cqw; letter-spacing: .05em; }
-.corner-cut { position: absolute; top: 11.5cqw; right: 7cqw; transform: rotate(45deg); font-size: 2.5cqw; color: #444; }
-.corner.is-used .corner-label { color: #fff; background: var(--danger); padding: 0 1.5cqw; border-radius: 4px; }
-
-.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--grid); }
-.cell-slot { display: block; }
-.cell { position: relative; width: 100%; aspect-ratio: 1 / 1; border: 1px solid var(--grid); font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: rgba(232, 100, 60, .25); padding: 6cqw 1cqw 1cqw; display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; }
-.cell-salmon { background: var(--salmon); }
-.cell-lightblue { background: var(--sky); }
-.cell-white { background: #fff; }
-.cell-num { position: absolute; top: .8cqw; left: 1.3cqw; font-size: 4.6cqw; font-weight: 800; line-height: 1; }
-.cell-text { position: relative; z-index: 3; font-weight: 800; font-size: 3.7cqw; line-height: 1.45; letter-spacing: -.02em; }
-.cell-text-long { font-size: 3.2cqw; letter-spacing: -.06em; }
-.cell-text rt { font-size: .55em; font-weight: 700; }
-.cell-art { width: 78%; height: auto; margin-top: auto; }
-.stamp-mark { position: absolute; inset: 14%; width: 72%; height: 72%; pointer-events: none; z-index: 2; opacity: .55; }
-.cell-done { position: absolute; right: 1cqw; bottom: 1cqw; z-index: 3; width: 11cqw; height: 11cqw; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.85); border: 2px solid var(--accent-dark); box-shadow: inset 0 0 0 1.5px #fff, inset 0 0 0 3px var(--accent-dark); color: var(--accent-dark); border-radius: 50%; font-size: 2.6cqw; font-weight: 900; transform: rotate(-12deg); }
-.times { display: flex; justify-content: space-around; gap: 1cqw; margin: 2.5cqw 0 0; border: 2px solid var(--band); border-radius: 8px; padding: 1cqw; font-weight: 800; font-size: 3.8cqw; }
-.times rt { font-size: .5em; }
+/* image is 1200 x 1700 */
+.bingo-card { container-type: inline-size; position: relative; width: min(100cqw, 70.5cqh); margin: 0; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(80, 40, 10, .15); background: #fff; }
+.card-art { display: block; width: 100%; height: auto; }
+/* Cell edges measured on the 1200 x 1700 image: x 95/431/751/1088, y 593/913/1233/1554 */
+.grid-hit { position: absolute; left: 7.917%; top: 34.882%; width: 82.75%; height: 56.53%; margin: 0; padding: 0; list-style: none;
+  display: grid; grid-template-columns: 336fr 320fr 337fr; grid-template-rows: 320fr 320fr 321fr; }
+.cell-slot { position: relative; }
+.cell { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; padding: 0; background: transparent; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: rgba(232, 100, 60, .25); }
+.cell:active { background: rgba(232, 100, 60, .12); }
+.cell:focus-visible { outline: 4px solid var(--focus); outline-offset: -4px; }
+.cell.is-marked { background: rgba(255, 255, 255, .12); }
+.stamp-leaf { position: absolute; right: 28%; bottom: 2%; width: 14%; height: 14%; opacity: .85; pointer-events: none; }
+.cell-done { position: absolute; right: 1.5%; bottom: 1.5%; width: 7.6cqw; height: 7.6cqw; display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .85); border: 2px solid var(--accent-dark); box-shadow: inset 0 0 0 1.5px #fff, inset 0 0 0 3px var(--accent-dark);
+  color: var(--accent-dark); border-radius: 50%; font-size: 1.85cqw; font-weight: 900; transform: rotate(-12deg); pointer-events: none; }
+/* Over the 抽選確認 corner (top right of the image). */
+.used-stamp { position: absolute; right: 1.5%; top: 2.5%; margin: 0; padding: .3em .6em; transform: rotate(40deg); background: var(--danger); color: #fff;
+  font-weight: 900; font-size: 4.2cqw; border-radius: 6px; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
 
 .card-bar { flex: none; padding-top: 6px; }
 .status-line { font-weight: 700; text-align: center; margin: 0 0 4px; }
@@ -119,3 +103,21 @@ fieldset { border: 1px solid var(--line); border-radius: 10px; }
 .map-pick select { width: 100%; }
 .view-map .map-root { bottom: 66px; }
 .view-map .map-pick { bottom: 6px; }
+
+/* ---------- closing notice: same look as the organisers' POP ---------- */
+.closing-banner { flex: none; margin: 0; padding: 6px 10px; background: #fff3e6; border-bottom: 2px solid #ff6600; color: #b23c00; font-weight: 800; text-align: center; font-size: .95em; }
+.pop-dlg { padding: 0; max-width: min(96vw, 720px); background: #fff; }
+.pop { container-type: inline-size; background: #fff; }
+.pop-border { height: 7cqw; background:
+  linear-gradient(to bottom, transparent 0 50%, #a0522d 50% 100%),
+  repeating-linear-gradient(to right, #ffd84d 0 7.5cqw, #fff 7.5cqw 11.5cqw, #ff9955 11.5cqw 17.5cqw, #fff 17.5cqw 23cqw); }
+.pop-border-bottom { transform: scaleY(-1); }
+.pop-body { padding: 4cqw 4cqw 2cqw; color: #595959; font-weight: 900; line-height: 1.15; }
+.pop-body p { margin: 0; }
+.pop-body rt { font-size: .32em; color: #595959; }
+.pop-line1 { font-size: 11cqw; white-space: nowrap; }
+.pop-time { color: #ff6600; font-size: 1.45em; border-bottom: .6cqw solid #ff6600; margin-left: .1em; }
+.pop-line2 { font-size: 11cqw; margin-top: 3cqw !important; padding-left: 18cqw; }
+.pop-em { color: #ff6600; text-decoration: underline; text-decoration-thickness: .6cqw; text-underline-offset: .12em; }
+.pop-em rt { color: #ff6600; }
+.pop-close { border-radius: 0; }

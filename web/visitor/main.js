@@ -260,7 +260,49 @@ async function loadSurvey() {
   });
 }
 
+// ---------- closing notices (same wording as the organisers' POP) ----------
+const notice = { list: [], offset: 0, shown: new Set() };
+try { for (const k of JSON.parse(sessionStorage.getItem('mb-notice-shown') ?? '[]')) notice.shown.add(k); } catch { /* storage unavailable */ }
+
+async function loadNotices() {
+  try {
+    const r = await getJson('/api/notices');
+    // Use the server clock: a visitor's phone may be set wrong.
+    notice.offset = Date.parse(r.now) - Date.now();
+    notice.list = r.notices;
+    checkNotices();
+  } catch { /* retried on the next interval */ }
+}
+
+function checkNotices() {
+  const now = Date.now() + notice.offset;
+  const active = notice.list.filter((n) => Date.parse(n.at) <= now);
+  const banner = $('#closing-banner');
+  banner.hidden = active.length === 0;
+  if (active.length) banner.textContent = `${active.map((n) => `${n.label}は${n.time}`).join('、')}で終了しました`;
+  const latest = active[active.length - 1];
+  const key = latest && `${latest.id}@${latest.at}`;
+  if (latest && !notice.shown.has(key)) {
+    notice.shown.add(key);
+    try { sessionStorage.setItem('mb-notice-shown', JSON.stringify([...notice.shown])); } catch { /* ignore */ }
+    showPop(latest);
+  }
+}
+
+function showPop(n) {
+  render($('#pop-text'), html`
+    <p class="pop-line1"><ruby>${n.label}<rt>${n.ruby}</rt></ruby>は<span class="pop-time">${n.time}</span></p>
+    <p class="pop-line2"><ruby class="pop-em">終了<rt>しゅうりょう</rt></ruby>です</p>`);
+  const dlg = $('#pop');
+  if ($('#detail').open) $('#detail').close();
+  if (!dlg.open) dlg.showModal();
+}
+
 // ---------- boot ----------
+$('[data-pop-close]').addEventListener('click', () => $('#pop').close());
+loadNotices();
+setInterval(checkNotices, 5_000);
+setInterval(loadNotices, 60_000);
 $('#detail [data-close]').addEventListener('click', () => $('#detail').close());
 $('#detail').addEventListener('click', (e) => { if (e.target === $('#detail')) $('#detail').close(); });
 window.addEventListener('hashchange', route);
