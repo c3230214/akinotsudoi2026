@@ -87,7 +87,7 @@ export function staffRoutes(app, { auth, draw, cards, devices, surveys, db }) {
       const target = machineScope(draw.getState(), action);
       if (target && target !== a.machineId) throw new DomainError('MACHINE_NOT_SELECTED', '担当台として選択している台だけ操作できます', { status: 403 });
     }
-    if (action.type === 'recordPrintResult' && a.staff.role === 'printer' && !['dispatched', 'confirmed', 'failed'].includes(action.outcome)) {
+    if (action.type === 'recordPrintResult' && a.staff.role === 'printer' && !['claimed', 'dispatched', 'confirmed', 'failed'].includes(action.outcome)) {
       throw new DomainError('FORBIDDEN', 'この操作の権限がありません', { status: 403 });
     }
     return draw.execute({ action, actor: staffActor(a), operationId, requestBody: request.body });

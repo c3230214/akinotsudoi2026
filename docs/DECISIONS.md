@@ -52,6 +52,9 @@ Related tests:
 | U02 | USER-REQUESTED | 来場者がマスをタップすると、そのマスのQR読取ボタンが出る。タップだけではマスは達成にならない。別のマスのQRは拒否する | `cardModel.cellForPoint` |
 | U03 | USER-REQUESTED | 来場者のスマホ画面はスクロール不要の1画面構成。受付用QR、ブース詳細、一覧はダイアログで開く | `web/visitor/` |
 | U04 | USER-REQUESTED | デジタルカードの外観は紙カード画像を基準にする。既存Webアプリのスクリーンショットと矛盾する点（マスの文言など）は紙カードと指示を優先し、下部タブ、ブース選択欄、体験済の印は取り入れた | `web/visitor/card.js` |
+| U05 | USER-REQUESTED | 2026-10-28 構成変更。スタッフ側にWindowsPC、iPad（ガラガラ1）、Pixelタブレット（ガラガラ2）を置き、来場者向けの案内iPadを廃止。案内画面とペアリング機能を削除し、migration 002で未使用テーブルを削除した（仕様書§9の`/kiosk/`と受入試験14は対象外になる） | `web/kiosk` 削除 |
+| U06 | USER-REQUESTED | 引換券はWindowsPCまたはiPadから無線でエプソン製プリンターへ印刷する。発券画面を任意のスタッフ端末で開けるようにし、印刷前にジョブを引き受ける（claimed）手順を加えて二重印刷を防ぐ。プリンター型番、接続方式（AirPrint、Windowsドライバー、ePOS等）、用紙は未確認 | `finish.js`、`web/print/` |
+| U07 | OPEN | カメラ合計3台の内訳と接続先（C1とC2×2をWindowsPCにUSB接続するのか、iPadやPixelの内蔵カメラを使うのか）が未確認。現実装はC1とC2を会場PCの検出プログラムから受ける前提のまま | 確認後に判断 |
 | C01 | PROVISIONAL | 心拍が必要なのは自動読取モードの台だけ（`heartbeatPolicy: auto_only`）。管理画面で「常に必要」「不要」に切替可能 | 管理タブ、`state.js` |
 | C02 | PROVISIONAL | 台ごとに手入力モードと自動読取モードを持ち、待機中にだけ理由付きで切り替える。手入力モード中の自動読取は記録のみで在庫と当選に数えない。自動モード中は手入力を拒否する | `balls.js` |
 | C03 | PROVISIONAL | 受付世代ID（券番号）を `GET /state` で配り、出玉イベントの `generation` と照合する。不一致は未割当、なしは要確認 | `balls.js ballDetected` |

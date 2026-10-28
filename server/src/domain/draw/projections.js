@@ -72,7 +72,7 @@ export function printQueue(s) {
     const session = s.sessions[id];
     if (!session.voucher) continue;
     for (const job of session.voucher.jobs) {
-      if (job.status === 'queued' || job.status === 'dispatched') {
+      if (job.status === 'queued' || job.status === 'printing' || job.status === 'dispatched') {
         jobs.push({ ...job, sessionId: id, machineId: session.machineId, machineName: s.machines[session.machineId]?.name, prizes: session.voucher.prizes, finalizedAt: session.finalizedAt, eventName: s.settings.eventName });
       }
     }
@@ -130,38 +130,5 @@ export function toStaffView(s, { now, devices = {} } = {}) {
       finalized: s.sessionOrder.filter((id) => s.sessions[id].status === 'finalized').length,
       redeemed: s.sessionOrder.filter((id) => s.sessions[id].voucher?.redeemedAt).length,
     },
-  };
-}
-
-/** Kiosk: only what visitors standing at one machine need to see. No card data. */
-export function toKioskView(s, machineId) {
-  const m = s.machines[machineId];
-  if (!m) return null;
-  const session = m.activeSessionId ? s.sessions[m.activeSessionId] : null;
-  let instruction;
-  let remaining = 0;
-  let balls = [];
-  if (m.emergency || m.resumeRequired) {
-    instruction = 'ただいま一時停止中です。係員の案内をお待ちください';
-  } else if (!session) {
-    instruction = 'ビンゴカードを係員に見せてください';
-  } else {
-    const sum = sessionSummary(session);
-    remaining = sum.remaining;
-    balls = activeBalls(session).map((b) => ({ order: b.order, color: b.color, colorLabel: b.color ? COLOR_LABELS[b.color] : '確認中', kind: b.kind }));
-    if (remaining > 0) instruction = `ガラガラを回してください。あと${remaining}回`;
-    else if (sum.review > 0) instruction = '係員が玉を確認しています。少しお待ちください';
-    else instruction = '抽選終了！係員から引換券を受け取ってください';
-  }
-  return {
-    machineId: m.id,
-    machineName: m.name,
-    instruction,
-    remaining,
-    n: session?.n ?? 0,
-    balls,
-    grades: s.settings.grades.map((g) => ({ grade: g.grade, color: g.color, colorLabel: COLOR_LABELS[g.color], prize: g.prize, soldOut: availablePrizes(s, g.color) <= 0 })),
-    stopped: Boolean(m.emergency || m.resumeRequired),
-    revision: m.revision,
   };
 }

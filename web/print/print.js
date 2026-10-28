@@ -2,27 +2,41 @@ import { getJson, operationId, postJson, sendWithRetry } from '../shared/api.js'
 import { $, $$, COLOR_LABELS, fmtDateTime, fmtTime, html, render, toast } from '../shared/html.js';
 import { openStream } from '../shared/stream.js';
 
-// Print station for the venue PC (Chrome started with --kiosk-printing).
+// Print station. Any staff device can run it: the Windows PC (Chrome with
+// --kiosk-printing prints without a dialog) or the iPad / Pixel tablet (the
+// OS print dialog appears and the operator taps 印刷). Each device chooses
+// which machine's vouchers it prints. Before printing, the device claims the
+// job on the server, so two devices never print the same job.
 // "印刷指示済み" only means window.print() returned; a person still confirms
-// the paper came out (§15 C13). Jobs are printed one at a time.
+// the paper came out (§15 C13).
 
-const st = { jobs: [], auto: true, busy: false, printed: new Set() };
+const st = { me: null, jobs: [], busy: false, printed: new Set() };
+
+function pref(key, fallback) {
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+}
+function setPref(key, value) {
+  try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
+}
 try {
-  st.auto = localStorage.getItem('mb-auto') !== '0';
   for (const id of JSON.parse(sessionStorage.getItem('mb-printed') ?? '[]')) st.printed.add(id);
 } catch { /* storage unavailable */ }
 
-function paper() {
-  let w = '58';
-  try { w = localStorage.getItem('mb-paper') ?? '58'; } catch { /* default */ }
-  return w === '80' ? '80' : '58';
+const paper = () => (pref('mb-paper', '58') === '80' ? '80' : '58');
+const auto = () => pref('mb-auto', '0') === '1';
+const station = () => pref('mb-station', '');
+function target() {
+  const v = pref('mb-target', '');
+  if (v) return v;
+  // An operator's device prints its own machine by default; others print all.
+  return st.me?.staff.role === 'operator' && st.me.machineId ? st.me.machineId : 'all';
 }
 function applyPaper() { $('#paper-css').href = `/print/paper-${paper()}.css`; }
+const mine = (j) => target() === 'all' || j.machineId === target();
 
 async function boot() {
-  let me = null;
-  try { me = await getJson('/api/staff/me'); } catch { /* not logged in */ }
-  if (!me) return login();
+  try { st.me = await getJson('/api/staff/me'); } catch { /* not logged in */ }
+  if (!st.me) return login();
   applyPaper();
   openStream('/api/stream/print', {
     onView: (v) => { st.jobs = v.jobs; draw(); pump(); },
@@ -31,8 +45,8 @@ async function boot() {
 }
 
 function login() {
-  render($('#app'), html`<form id="login" class="panel stack"><h2>発券アカウントでログイン</h2>
-    <label for="ln">ログイン名</label><input id="ln" autocomplete="username" required>
+  render($('#app'), html`<form id="login" class="panel stack"><h2>スタッフアカウントでログイン</h2>
+    <label for="ln">ログイン名</label><input id="ln" autocomplete="username" autocapitalize="off" required>
     <label for="pw">パスコード</label><input id="pw" type="password" autocomplete="current-password" required>
     <button class="btn">ログイン</button></form>`);
   $('#login').addEventListener('submit', async (e) => {
@@ -42,38 +56,62 @@ function login() {
 }
 
 function draw() {
-  const queued = st.jobs.filter((j) => j.status === 'queued');
-  const dispatched = st.jobs.filter((j) => j.status === 'dispatched');
+  const list = st.jobs.filter(mine);
+  const queued = list.filter((j) => j.status === 'queued');
+  const printing = list.filter((j) => j.status === 'printing');
+  const dispatched = list.filter((j) => j.status === 'dispatched');
+  const others = st.jobs.length - list.length;
   render($('#app'), html`
-    <section class="panel row">
-      <label class="row"><input type="checkbox" id="auto" ${st.auto ? 'checked' : ''}> 自動で印刷する</label>
-      <label class="row">用紙幅
-        <select id="paper"><option value="58" ${paper() === '58' ? 'selected' : ''}>58mm</option><option value="80" ${paper() === '80' ? 'selected' : ''}>80mm</option></select></label>
-      <span class="muted">プリンター機種・用紙幅は未確定です。実機で確認してください。</span>
+    <section class="panel stack">
+      <div class="row">
+        <label for="station">この端末の名前</label>
+        <input id="station" value="${station()}" placeholder="例：WindowsPC、iPad、Pixel" maxlength="40">
+      </div>
+      <div class="row">
+        <label for="target">この端末で印刷する券</label>
+        <select id="target">
+          <option value="all" ${target() === 'all' ? 'selected' : ''}>すべての台</option>
+          ${st.me.machines.map((m) => html`<option value="${m.id}" ${target() === m.id ? 'selected' : ''}>${m.name}の券だけ</option>`)}
+        </select>
+        <label class="row"><input type="checkbox" id="auto" ${auto() ? 'checked' : ''}> 届いたら自動で印刷する</label>
+        <label class="row">用紙幅
+          <select id="paper"><option value="58" ${paper() === '58' ? 'selected' : ''}>58mm</option><option value="80" ${paper() === '80' ? 'selected' : ''}>80mm</option></select></label>
+      </div>
+      ${station() ? '' : html`<p class="notice">端末の名前を入れてください。別の端末と同じ券を印刷しないよう、印刷を引き受けた端末名を記録します。</p>`}
+      <p class="muted small">プリンター機種と用紙幅は未確定です。iPad や Pixel タブレットでは、印刷のたびに印刷画面が開くので「プリント」を押してください。</p>
     </section>
     <section class="panel"><h2>印刷待ち（${queued.length}）</h2>
-      ${queued.length ? '' : html`<p class="muted">ありません</p>`}
+      ${queued.length ? '' : html`<p class="muted">ありません${others ? `（ほかの台の券 ${others} 件は別の端末が担当）` : ''}</p>`}
       ${queued.map((j) => html`<div class="job"><span class="vno">${j.sessionId}</span><span>${j.machineName}</span><span>${j.kind === 'reprint' ? '再印刷' : ''}</span>
-        <button class="btn btn-small" data-print="${j.jobId}">今すぐ印刷</button></div>`)}
+        <button class="btn btn-small" data-print="${j.jobId}" ${station() ? '' : 'disabled'}>この端末で印刷</button></div>`)}
     </section>
+    ${printing.length ? html`<section class="panel"><h2>印刷中（${printing.length}）</h2>
+      <p class="muted">担当の端末が印刷しています。端末を閉じてしまった場合は、スタッフ画面の「同じ番号で再印刷」を使ってください。</p>
+      ${printing.map((j) => html`<div class="job"><span class="vno">${j.sessionId}</span><span>${j.machineName}</span><span>担当：${j.station ?? '不明'} ${fmtTime(j.updatedAt)}</span></div>`)}
+    </section>` : ''}
     <section class="panel"><h2>排紙の確認待ち（${dispatched.length}）</h2>
       <p class="muted">プリンターから券が出たか目で確認して押してください。</p>
-      ${dispatched.map((j) => html`<div class="job"><span class="vno">${j.sessionId}</span><span>${j.machineName} ${fmtTime(j.updatedAt)}</span>
+      ${dispatched.map((j) => html`<div class="job"><span class="vno">${j.sessionId}</span><span>${j.machineName} ${j.station ?? ''} ${fmtTime(j.updatedAt)}</span>
         <button class="btn btn-ok btn-small" data-ok="${j.jobId}" data-s="${j.sessionId}">券が出た</button>
         <button class="btn btn-danger btn-small" data-ng="${j.jobId}" data-s="${j.sessionId}">出ない・汚れ（再印刷）</button></div>`)}
     </section>`);
-  $('#auto').addEventListener('change', (e) => { st.auto = e.target.checked; try { localStorage.setItem('mb-auto', st.auto ? '1' : '0'); } catch { /* ignore */ } pump(); });
-  $('#paper').addEventListener('change', (e) => { try { localStorage.setItem('mb-paper', e.target.value); } catch { /* ignore */ } applyPaper(); });
-  for (const b of $$('[data-print]')) b.addEventListener('click', () => printJob(st.jobs.find((j) => j.jobId === b.dataset.print), { manual: true }));
+  $('#station').addEventListener('change', (e) => { setPref('mb-station', e.target.value.trim()); draw(); pump(); });
+  $('#target').addEventListener('change', (e) => { setPref('mb-target', e.target.value); draw(); pump(); });
+  $('#auto').addEventListener('change', (e) => { setPref('mb-auto', e.target.checked ? '1' : '0'); pump(); });
+  $('#paper').addEventListener('change', (e) => { setPref('mb-paper', e.target.value); applyPaper(); });
+  for (const b of $$('[data-print]')) b.addEventListener('click', () => printJob(st.jobs.find((j) => j.jobId === b.dataset.print)));
   for (const b of $$('[data-ok]')) b.addEventListener('click', () => report(b.dataset.s, b.dataset.ok, 'confirmed'));
   for (const b of $$('[data-ng]')) b.addEventListener('click', () => report(b.dataset.s, b.dataset.ng, 'failed'));
 }
 
-async function report(sessionId, jobId, outcome) {
+async function report(sessionId, jobId, outcome, extra = {}) {
   try {
-    await sendWithRetry('/api/staff/commands', { operationId: operationId(), type: 'recordPrintResult', sessionId, jobId, outcome });
+    await sendWithRetry('/api/staff/commands', { operationId: operationId(), type: 'recordPrintResult', sessionId, jobId, outcome, ...extra });
+    return true;
   } catch (error) {
-    toast(error.message, { kind: 'error' });
+    // Losing a claim to another device is normal when several devices run auto-print.
+    if (error.code !== 'JOB_ALREADY_CLAIMED') toast(error.message, { kind: 'error', ms: 6000 });
+    return false;
   }
 }
 
@@ -88,16 +126,26 @@ function receipt(j) {
     <p class="r-note">景品交換所でこの券をお渡しください。景品交換は15:00まで。</p>`;
 }
 
-async function printJob(j, { manual = false } = {}) {
-  if (!j || st.busy) return;
-  if (!manual && st.printed.has(j.jobId)) return;
+async function printJob(j) {
+  if (!j || st.busy || !station()) return;
+  if (st.printed.has(j.jobId)) return;
   st.busy = true;
   try {
+    // Claim first: if another device already took it, the server says so and we stop.
+    if (!(await report(j.sessionId, j.jobId, 'claimed', { station: station() }))) return;
     const box = $('#receipt');
     render(box, receipt(j));
     const img = box.querySelector('img');
     await new Promise((resolve) => { if (img.complete) resolve(); else { img.onload = resolve; img.onerror = resolve; } });
-    window.print();
+    // On iPad / Android the print sheet can return before printing finishes;
+    // keep this receipt on screen until the browser reports the print closed,
+    // so the next job cannot replace what is being printed.
+    await new Promise((resolve) => {
+      const done = () => { clearTimeout(timer); resolve(); };
+      const timer = setTimeout(done, 120_000);
+      window.addEventListener('afterprint', done, { once: true });
+      window.print();
+    });
     st.printed.add(j.jobId);
     try { sessionStorage.setItem('mb-printed', JSON.stringify([...st.printed])); } catch { /* ignore */ }
     await report(j.sessionId, j.jobId, 'dispatched');
@@ -107,8 +155,8 @@ async function printJob(j, { manual = false } = {}) {
 }
 
 async function pump() {
-  if (!st.auto || st.busy) return;
-  const next = st.jobs.find((j) => j.status === 'queued' && !st.printed.has(j.jobId));
+  if (!auto() || st.busy || !station()) return;
+  const next = st.jobs.find((j) => j.status === 'queued' && mine(j) && !st.printed.has(j.jobId));
   if (next) {
     await printJob(next);
     setTimeout(pump, 500);

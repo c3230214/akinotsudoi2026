@@ -1,6 +1,6 @@
 import { DomainError } from '../domain/errors.js';
 
-export const COOKIES = Object.freeze({ visitor: 'mb_card', staff: 'mb_staff', kiosk: 'mb_kiosk' });
+export const COOKIES = Object.freeze({ visitor: 'mb_card', staff: 'mb_staff' });
 
 export function cookieOptions(config, maxAgeSec) {
   return { path: '/', httpOnly: true, secure: config.cookieSecure, sameSite: 'strict', maxAge: maxAgeSec };

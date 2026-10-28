@@ -58,34 +58,3 @@ export function deleteExpiredSessions(db, nowIso) {
   // Stored values share one +09:00 format, so string comparison orders correctly.
   db.prepare('DELETE FROM staff_sessions WHERE expires_at < ?').run(nowIso);
 }
-
-export function insertKioskPairing(db, { codeHash, machineId, expiresAt, createdBy }) {
-  db.prepare('INSERT INTO kiosk_pairings (code_hash, machine_id, expires_at, used_at, created_by) VALUES (?, ?, ?, NULL, ?)')
-    .run(codeHash, machineId, expiresAt, createdBy);
-}
-
-/** One-time use: the UPDATE only succeeds for an unused, unexpired code. */
-export function consumeKioskPairing(db, codeHash, nowIso) {
-  const row = db.prepare('SELECT machine_id FROM kiosk_pairings WHERE code_hash = ? AND used_at IS NULL AND expires_at >= ?').get(codeHash, nowIso);
-  if (!row) return null;
-  const r = db.prepare('UPDATE kiosk_pairings SET used_at = ? WHERE code_hash = ? AND used_at IS NULL').run(nowIso, codeHash);
-  return r.changes === 1 ? row.machine_id : null;
-}
-
-export function insertKioskDevice(db, { kioskId, tokenHash, machineId, at }) {
-  db.prepare('INSERT INTO kiosk_devices (kiosk_id, token_hash, machine_id, created_at) VALUES (?, ?, ?, ?)').run(kioskId, tokenHash, machineId, at);
-}
-
-export function findKioskByTokenHash(db, tokenHash) {
-  const r = db.prepare('SELECT kiosk_id, machine_id FROM kiosk_devices WHERE token_hash = ? AND revoked_at IS NULL').get(tokenHash);
-  return r ? { kioskId: r.kiosk_id, machineId: r.machine_id } : null;
-}
-
-export function listKiosks(db) {
-  return db.prepare('SELECT kiosk_id, machine_id, created_at, revoked_at FROM kiosk_devices ORDER BY created_at').all()
-    .map((r) => ({ kioskId: r.kiosk_id, machineId: r.machine_id, createdAt: r.created_at, revokedAt: r.revoked_at }));
-}
-
-export function revokeKiosk(db, kioskId, at) {
-  return db.prepare('UPDATE kiosk_devices SET revoked_at = ? WHERE kiosk_id = ? AND revoked_at IS NULL').run(at, kioskId).changes === 1;
-}

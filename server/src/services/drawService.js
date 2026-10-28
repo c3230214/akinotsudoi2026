@@ -3,7 +3,7 @@ import { appendActionLog, findOperation, insertOperation, loadSnapshot, saveSnap
 import { DomainError, fail } from '../domain/errors.js';
 import { initialState } from '../domain/draw/state.js';
 import { transition } from '../domain/draw/transition.js';
-import { toKioskView, toStaffView } from '../domain/draw/projections.js';
+import { toStaffView } from '../domain/draw/projections.js';
 import { sha256 } from './secrets.js';
 
 function canonical(value) {
@@ -83,7 +83,6 @@ export function createDrawService({ db, bus, clock, deviceOnline = () => ({}) })
     execute,
     getState: () => state,
     getStaffView: (extras = {}) => toStaffView(state, { now: clock(), ...extras }),
-    getKioskView: (machineId) => toKioskView(state, machineId),
     /** Re-read the snapshot (used after a restore). */
     reload() { state = loadSnapshot(db) ?? state; },
   };

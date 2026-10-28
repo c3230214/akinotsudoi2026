@@ -107,6 +107,7 @@ async function boot() {
       <option value="">担当台を選択</option>
       ${st.me.machines.map((m) => html`<option value="${m.id}" ${m.id === st.me.machineId ? raw('selected') : ''}>${m.name}</option>`)}
     </select>
+    <a class="btn btn-plain btn-small" href="/print/" target="mb-print">発券画面</a>
     <button type="button" class="btn btn-plain btn-small" id="logout">ログアウト</button>`.value;
   $('#machine-select').addEventListener('change', async (e) => {
     try {
@@ -139,7 +140,7 @@ function showLogin() {
       <label for="login-pass">パスコード</label>
       <input id="login-pass" name="passcode" type="password" autocomplete="current-password" required>
       <button class="btn btn-block" type="submit">ログイン</button>
-      <p class="muted">案内iPadは <a href="/kiosk/">案内画面</a>、発券PCは <a href="/print/">発券画面</a> を開いてください。</p>
+      <p class="muted">引換券の印刷は <a href="/print/">発券画面</a> で行います。</p>
     </form>`);
   $('#login').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -457,7 +458,6 @@ function viewAdmin() {
     <section class="panel" id="admin-extra"><h2>スタッフ・端末・データ</h2>
       <div class="row">
         <button class="btn btn-secondary" data-act="loadStaff">スタッフ一覧</button>
-        <button class="btn btn-secondary" data-act="kioskCode">案内iPad登録コード発行</button>
         <a class="btn btn-plain" href="/api/admin/export/sessions.csv">抽選結果CSV</a>
         <a class="btn btn-plain" href="/api/admin/export/audit.csv">操作履歴CSV</a>
         <button class="btn btn-secondary" data-act="loadSurvey">アンケート設定・集計</button>
@@ -720,18 +720,6 @@ async function adminAct(name) {
         });
         for (const b of $$('[data-staff-toggle]', pane())) b.addEventListener('click', async () => { try { await api('PATCH', `/api/admin/staff/${b.dataset.staffToggle}`, { active: b.dataset.active !== 'true' }); adminAct('loadStaff'); } catch (error) { showError(error); } });
         for (const b of $$('[data-staff-pass]', pane())) b.addEventListener('click', async () => { const p = window.prompt('新しいパスコード（8文字以上）'); if (!p) return; try { await api('PATCH', `/api/admin/staff/${b.dataset.staffPass}`, { passcode: p }); toast('変更しました', { kind: 'ok' }); } catch (error) { showError(error); } });
-      } catch (error) { showError(error); }
-      break;
-    }
-    case 'kioskCode': {
-      const mid = window.prompt(`案内iPadを紐付ける台ID（${v.machines.map((m) => m.id).join(' / ')}）`, v.machines[0].id);
-      if (!mid) break;
-      try {
-        const out = await postJson('/api/admin/kiosk-codes', { machineId: mid.trim() });
-        const { kiosks } = await getJson('/api/admin/kiosks');
-        render(pane(), html`<p class="notice notice-ok">登録コード <strong class="code">${out.code}</strong>（${out.machineId}、${fmtTime(out.expiresAt)}まで有効、1回限り）。案内iPadで /kiosk/ を開いて入力してください。</p>
-          <h3>登録済みの案内iPad</h3><ul class="plain">${kiosks.map((k) => html`<li>${k.kioskId} ${k.machineId} ${fmtDateTime(k.createdAt)} ${k.revokedAt ? '（失効）' : html`<button class="btn btn-small btn-plain" data-revoke="${k.kioskId}">失効させる</button>`}</li>`)}</ul>`);
-        for (const b of $$('[data-revoke]', pane())) b.addEventListener('click', async () => { await postJson(`/api/admin/kiosks/${b.dataset.revoke}/revoke`).catch(showError); adminAct('kioskCode'); });
       } catch (error) { showError(error); }
       break;
     }

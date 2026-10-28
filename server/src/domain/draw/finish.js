@@ -67,19 +67,30 @@ export function finalizeResult(s, a, ctx) {
   };
 }
 
-const PRINT_OUTCOMES = ['dispatched', 'confirmed', 'failed'];
+const PRINT_OUTCOMES = ['claimed', 'dispatched', 'confirmed', 'failed'];
 
 /**
- * dispatched = the print-station browser called window.print();
+ * claimed = one print station took the job (only one can; several devices
+ * may show the queue, so this prevents two printers printing the same job);
+ * dispatched = that browser called window.print();
  * confirmed / failed = a person checked the paper (§15 C13).
  */
 export function recordPrintResult(s, a, ctx) {
   const session = sessionOf(s, a.sessionId);
   if (!session.voucher) fail('NO_VOUCHER', 'この抽選の引換券はまだ発行されていません');
-  if (!PRINT_OUTCOMES.includes(a.outcome)) invalid('outcome must be dispatched, confirmed or failed');
+  if (!PRINT_OUTCOMES.includes(a.outcome)) invalid('outcome must be claimed, dispatched, confirmed or failed');
   const job = session.voucher.jobs.find((j) => j.jobId === a.jobId);
   if (!job) fail('UNKNOWN_PRINT_JOB', '印刷ジョブが見つかりません', { status: 404 });
-  if (a.outcome === 'dispatched' && job.status !== 'queued') {
+  if (a.outcome === 'claimed') {
+    if (job.status !== 'queued') {
+      fail('JOB_ALREADY_CLAIMED', `${session.id} は別の端末（${job.station ?? '不明'}）が印刷を担当しています`, { details: { station: job.station ?? null } });
+    }
+    job.status = 'printing';
+    job.station = typeof a.station === 'string' && a.station.trim() ? a.station.trim().slice(0, 40) : (ctx.actor?.name ?? null);
+    job.updatedAt = ctx.now;
+    return { touched: [session.machineId], message: `${session.id} を ${job.station} で印刷します`, result: { jobId: job.jobId, status: job.status }, events: [{ topic: 'print', sessionId: session.id }] };
+  }
+  if (a.outcome === 'dispatched' && !['queued', 'printing'].includes(job.status)) {
     return { touched: [session.machineId], message: '印刷済みとして記録済みです', result: { jobId: job.jobId, status: job.status } };
   }
   job.status = a.outcome;
@@ -100,6 +111,15 @@ export function requestReprint(s, a, ctx) {
   if (!session.voucher) fail('NO_VOUCHER', 'この抽選の引換券はまだ発行されていません');
   const reason = requireReason(a.reason);
   if (session.voucher.redeemedAt) fail('ALREADY_REDEEMED', '引換済みの券は再印刷できません');
+  // A job left half-way (station closed while printing) is closed out, so
+  // only the new job remains in the queue.
+  for (const j of session.voucher.jobs) {
+    if (j.status === 'queued' || j.status === 'printing') {
+      j.status = 'failed';
+      j.note = `再印刷により中止：${reason}`.slice(0, 200);
+      j.updatedAt = ctx.now;
+    }
+  }
   const job = queuePrint(s, session, ctx, 'reprint');
   job.note = reason;
   return { touched: [session.machineId], message: `${session.id} を同じ券番号で再印刷します`, result: { jobId: job.jobId }, events: [{ topic: 'print', sessionId: session.id }] };

@@ -248,20 +248,6 @@ test('ログイン失敗が続くと429で止める', async (t) => {
   assert.equal(right.status, 429);
 });
 
-test('案内iPadは1回限りの登録コードで台に紐付き、その台の表示だけ取得する', async (t) => {
-  const f = await makeApp();
-  t.after(() => f.close());
-  const admin = await f.staff('admin');
-  const code = (await f.req('POST', '/api/admin/kiosk-codes', { cookie: admin, body: { machineId: 'garagara-2' } })).json.code;
-  const pair = await f.req('POST', '/api/kiosk/pair', { body: { code } });
-  assert.equal(pair.status, 200);
-  const kiosk = f.cookieOf(pair.res);
-  const view = await f.req('GET', '/api/kiosk/view', { cookie: kiosk });
-  assert.equal(view.json.machineId, 'garagara-2');
-  assert.equal((await f.req('POST', '/api/kiosk/pair', { body: { code } })).status, 401);
-  assert.equal((await f.req('GET', '/api/staff/view', { cookie: kiosk })).status, 401);
-});
-
 test('会場マップ：未登録なら準備中の会場だけ、取込後はブースとステージ予定を返す。不正データは拒否', async (t) => {
   const f = await makeApp();
   t.after(() => f.close());

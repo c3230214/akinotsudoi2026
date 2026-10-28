@@ -15,14 +15,6 @@ export function requireStaff(auth, ...roles) {
   };
 }
 
-export function requireKiosk(auth) {
-  return async function kioskHook(request) {
-    const k = auth.authenticateKiosk(request.cookies[COOKIES.kiosk]);
-    if (!k) throw new DomainError('UNAUTHENTICATED', '案内端末が登録されていません', { status: 401 });
-    request.kiosk = k;
-  };
-}
-
 export function requireDevice(devices) {
   return async function deviceHook(request) {
     const header = request.headers.authorization ?? '';

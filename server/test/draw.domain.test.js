@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, ONE_LINE, THREE_LINES, ALL } from './helpers/drawFixture.js';
 import { ballLedger, initialState } from '../src/domain/draw/state.js';
 import { transition } from '../src/domain/draw/transition.js';
-import { toKioskView, toStaffView } from '../src/domain/draw/projections.js';
+import { toStaffView } from '../src/domain/draw/projections.js';
 import { COLORS } from '../src/domain/rules.js';
 
 const sid = (w, m = 'garagara-1') => w.state.machines[m].activeSessionId;
@@ -261,16 +261,21 @@ test('玉の保存則：どの操作の後も色別の総数が変わらない',
   assert.deepEqual(total(), before);
 });
 
-test('14: 案内表示は文字と大きな個数で状態を表す（音声に依存しない）', () => {
+test('複数の発券端末：先に引き受けた端末だけが印刷でき、再印刷で中断ジョブは閉じる', () => {
   const w = makeWorld();
-  assert.match(toKioskView(w.state, 'garagara-1').instruction, /カード/);
-  w.start('garagara-1', THREE_LINES);
+  w.start('garagara-1', ONE_LINE);
   w.ball('garagara-1', 'white');
-  const k = toKioskView(w.state, 'garagara-1');
-  assert.equal(k.remaining, 1);
-  assert.match(k.instruction, /あと1回/);
-  assert.equal(k.balls[0].colorLabel, '白');
-  assert.equal(JSON.stringify(k).includes('card-'), false);
+  w.run({ type: 'finalizeResult', machineId: 'garagara-1', sessionId: 'BM-0001', trayEmptied: true });
+  w.run({ type: 'recordPrintResult', sessionId: 'BM-0001', jobId: 'pj-1', outcome: 'claimed', station: 'WindowsPC' });
+  assert.throws(() => w.run({ type: 'recordPrintResult', sessionId: 'BM-0001', jobId: 'pj-1', outcome: 'claimed', station: 'iPad' }), { code: 'JOB_ALREADY_CLAIMED' });
+  assert.equal(toStaffView(w.state).printQueue[0].status, 'printing');
+  w.run({ type: 'requestReprint', sessionId: 'BM-0001', reason: '端末を閉じてしまった' });
+  const jobs = w.state.sessions['BM-0001'].voucher.jobs;
+  assert.deepEqual(jobs.map((j) => j.status), ['failed', 'queued']);
+  w.run({ type: 'recordPrintResult', sessionId: 'BM-0001', jobId: 'pj-2', outcome: 'claimed', station: 'iPad' });
+  w.run({ type: 'recordPrintResult', sessionId: 'BM-0001', jobId: 'pj-2', outcome: 'dispatched' });
+  w.run({ type: 'redeemPrize', voucher: 'BM-0001' });
+  assert.equal(w.state.prizes.white.allocated, 1);
 });
 
 test('transitionは入力stateを変更しない', () => {

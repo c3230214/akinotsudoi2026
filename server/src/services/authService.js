@@ -1,20 +1,19 @@
 import { tx } from '../db/connection.js';
 import {
-  consumeKioskPairing, deleteExpiredSessions, deleteSession, findKioskByTokenHash, findSession, findStaffByLogin,
-  insertKioskDevice, insertKioskPairing, insertSession, insertStaff, listKiosks, listStaff, revokeKiosk, setSessionMachine, updateStaff,
+  deleteExpiredSessions, deleteSession, findSession, findStaffByLogin,
+  insertSession, insertStaff, listStaff, setSessionMachine, updateStaff,
 } from '../db/repos/staffRepo.js';
 import { appendActionLog } from '../db/repos/drawRepo.js';
 import { fail, invalid } from '../domain/errors.js';
 import { addMs } from '../time.js';
 import { createRateLimiter } from './rateLimiter.js';
-import { DUMMY_PASSCODE_HASH, hashPasscode, randomCode, randomToken, sha256, verifyPasscode } from './secrets.js';
+import { DUMMY_PASSCODE_HASH, hashPasscode, randomToken, sha256, verifyPasscode } from './secrets.js';
 
 export const ROLES = Object.freeze(['admin', 'operator', 'prize', 'printer']);
 export const ROLE_LABELS = Object.freeze({ admin: '管理者', operator: '台担当', prize: '景品担当', printer: '発券端末' });
 const LOGIN_RE = /^[a-z0-9._-]{3,32}$/;
 // TODO(DECISION-C23): session lifetime is a proposal (covers the event day).
 const SESSION_TTL_MS = 14 * 60 * 60 * 1000;
-const PAIRING_TTL_MS = 10 * 60 * 1000;
 
 export function createAuthService({ db, clock, machineExists }) {
   const failuresByName = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 5 });
@@ -101,44 +100,8 @@ export function createAuthService({ db, clock, machineExists }) {
     if (!ok) fail('UNKNOWN_STAFF', 'スタッフが見つかりません', { status: 404 });
   }
 
-  function issueKioskCode(machineId, by) {
-    if (!machineExists(machineId)) fail('UNKNOWN_MACHINE', '台が見つかりません', { status: 404 });
-    const code = randomCode(8);
-    const at = clock();
-    tx(db, () => {
-      insertKioskPairing(db, { codeHash: sha256(code), machineId, expiresAt: addMs(at, PAIRING_TTL_MS), createdBy: by.name });
-      appendActionLog(db, { at, actor: by, type: 'issueKioskCode', action: { machineId }, result: 'ok' });
-    });
-    return { code, machineId, expiresAt: addMs(at, PAIRING_TTL_MS) };
-  }
-
-  function pairKiosk(code) {
-    if (typeof code !== 'string') invalid('登録コードを入力してください');
-    const normalized = code.trim().toUpperCase().replace(/[\s-]/g, '');
-    if (!/^[0-9A-Z]{8}$/.test(normalized)) fail('INVALID_CODE', '登録コードが正しくないか、期限切れです', { status: 401 });
-    const at = clock();
-    const token = randomToken(32);
-    const kioskId = `k-${randomCode(10)}`;
-    const machineId = tx(db, () => {
-      const m = consumeKioskPairing(db, sha256(normalized), at);
-      if (!m) return null;
-      insertKioskDevice(db, { kioskId, tokenHash: sha256(token), machineId: m, at });
-      appendActionLog(db, { at, actor: { kind: 'kiosk', id: kioskId }, type: 'pairKiosk', action: { machineId: m }, result: 'ok' });
-      return m;
-    });
-    if (!machineId) fail('INVALID_CODE', '登録コードが正しくないか、期限切れです', { status: 401 });
-    return { token, kioskId, machineId };
-  }
-
-  function authenticateKiosk(token) {
-    if (typeof token !== 'string' || token.length < 20 || token.length > 100) return null;
-    return findKioskByTokenHash(db, sha256(token));
-  }
-
   return {
     login, authenticate, logout, selectMachine, createStaff, changeStaff, listStaff: () => listStaff(db),
-    issueKioskCode, pairKiosk, authenticateKiosk, listKiosks: () => listKiosks(db),
-    revokeKiosk: (id) => tx(db, () => revokeKiosk(db, id, clock())),
   };
 }
 

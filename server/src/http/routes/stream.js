@@ -1,5 +1,4 @@
-import { requireKiosk, requireStaff } from '../auth.js';
-import { COOKIES, cookieOptions } from '../security.js';
+import { requireStaff } from '../auth.js';
 import { staffView } from './staff.js';
 import { printQueue } from '../../domain/draw/projections.js';
 
@@ -51,30 +50,12 @@ function openStream(request, reply, bus, project, { filter = () => true, tickMs 
   });
 }
 
-export function streamRoutes(app, { auth, draw, devices, bus, config }) {
+export function streamRoutes(app, { auth, draw, devices, bus }) {
   app.get('/api/stream/staff', { preHandler: requireStaff(auth) }, async (request, reply) => {
     openStream(request, reply, bus, () => staffView(draw, devices), { tickMs: 5_000 });
   });
 
-  app.get('/api/stream/kiosk', { preHandler: requireKiosk(auth) }, async (request, reply) => {
-    const { machineId } = request.kiosk;
-    openStream(request, reply, bus, () => draw.getKioskView(machineId), { filter: (evt) => Boolean(evt.touched?.includes(machineId)) });
-  });
-
   app.get('/api/stream/print', { preHandler: requireStaff(auth, 'printer', 'admin', 'operator') }, async (request, reply) => {
     openStream(request, reply, bus, () => ({ jobs: printQueue(draw.getState()) }), { filter: (evt) => Boolean(evt.events?.some((e) => e.topic === 'print')) });
-  });
-
-  app.post('/api/kiosk/pair', {
-    schema: { body: { type: 'object', required: ['code'], properties: { code: { type: 'string', maxLength: 20 } } } },
-  }, async (request, reply) => {
-    const out = auth.pairKiosk(request.body.code);
-    reply.setCookie(COOKIES.kiosk, out.token, cookieOptions(config, 60 * 60 * 24 * 7));
-    return { machineId: out.machineId };
-  });
-
-  app.get('/api/kiosk/view', { preHandler: requireKiosk(auth) }, async (request, reply) => {
-    reply.header('Cache-Control', 'no-store');
-    return draw.getKioskView(request.kiosk.machineId);
   });
 }

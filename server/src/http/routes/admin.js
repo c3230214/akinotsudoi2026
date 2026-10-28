@@ -40,13 +40,6 @@ export function adminRoutes(app, { auth, draw, maps, surveys, db }) {
     return { ok: true };
   });
 
-  app.post('/api/admin/kiosk-codes', {
-    preHandler: admin, schema: { body: { type: 'object', required: ['machineId'], properties: { machineId: { type: 'string', maxLength: 32 } } } },
-  }, async (request) => auth.issueKioskCode(request.body.machineId, staffActor(request.staffAuth)));
-
-  app.get('/api/admin/kiosks', { preHandler: admin }, async () => ({ kiosks: auth.listKiosks() }));
-  app.post('/api/admin/kiosks/:kioskId/revoke', { preHandler: admin }, async (request) => ({ ok: auth.revokeKiosk(request.params.kioskId) }));
-
   app.get('/api/admin/map', { preHandler: admin }, async () => maps.exportMap());
   app.put('/api/admin/map', { preHandler: admin, bodyLimit: 512 * 1024 }, async (request) => maps.importMap(request.body, staffActor(request.staffAuth)));
 
