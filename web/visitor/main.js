@@ -394,5 +394,7 @@ $('#detail').addEventListener('click', (e) => { if (e.target === $('#detail')) $
 window.addEventListener('hashchange', route);
 // Pick up "抽選済み" after staff accepted the card.
 setInterval(() => { if (!document.hidden && !$('#view-card').hidden && state.card && !state.card.used && !$('#detail').open) loadCard(); }, 20_000);
+// Restored from the back/forward cache (e.g. back from the admin link): refresh the card and notices.
+window.addEventListener('pageshow', (e) => { if (e.persisted) { loadNotices(); if (!$('#view-card').hidden) loadCard(); } });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#view-card').hidden && !$('#detail').open) loadCard(); });
 route();

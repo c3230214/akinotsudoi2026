@@ -89,3 +89,6 @@ th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: lef
 th { background: #f6efe8; font-size: .9em; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .table-wrap { overflow-x: auto; }
+
+/* Shown when the server was updated while this page stayed open. */
+#update-banner { position: sticky; top: 0; z-index: 100; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 8px 12px; background: #1d4ed8; color: #fff; font-weight: 700; }

@@ -92,3 +92,25 @@ test('結合：画面が呼ぶ /api/ のパスはすべてサーバーのルー�
   }
   assert.deepEqual(missing, []);
 });
+
+test('キャッシュ：画面のファイルは毎回確認（304で再利用）、APIは保存しない、更新検知のため版を返す', async (t) => {
+  const f = await makeApp({ env: { WEB_DIR: WEB } });
+  t.after(() => f.close());
+  for (const url of ['/visitor/', '/visitor/main.js', '/shared/api.js', '/tablet/tablet.css']) {
+    const r = await f.req('GET', url, { origin: null });
+    assert.equal(r.res.headers['cache-control'], 'no-cache', url);
+    const etag = r.res.headers.etag;
+    assert.ok(etag, `${url} has an ETag`);
+    const again = await f.req('GET', url, { origin: null, headers: { 'if-none-match': etag } });
+    assert.equal(again.status, 304, `${url} revalidates without download`);
+  }
+  assert.match((await f.req('GET', '/assets/ogakky.webp', { origin: null })).res.headers['cache-control'], /max-age=3600/);
+  // Every API answer, including errors and routes without their own header, is no-store.
+  for (const url of ['/api/staff/me', '/api/notices', '/api/visitor/card', '/api/nope']) {
+    const r = await f.req('GET', url, { origin: null });
+    assert.equal(r.res.headers['cache-control'], 'no-store', url);
+    assert.ok(r.res.headers['x-app-version'], `${url} carries the build id`);
+  }
+  assert.equal((await f.req('GET', '/api/map', { origin: null })).res.headers['cache-control'], 'no-cache');
+  assert.ok((await f.req('GET', '/health', { origin: null })).res.headers['x-app-version']);
+});

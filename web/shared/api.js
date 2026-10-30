@@ -20,10 +20,35 @@ export async function api(method, url, body) {
   } catch {
     throw new ApiError(0, 'NETWORK', '通信できませんでした。電波の状態を確認してください');
   }
+  noticeVersion(res.headers.get('X-App-Version'));
   let data = null;
   try { data = await res.json(); } catch { /* empty or non-JSON body */ }
   if (!res.ok) throw new ApiError(res.status, data?.error ?? 'HTTP', data?.message ?? `エラー（HTTP ${res.status}）`, data);
   return data;
+}
+
+let firstVersion = null;
+/**
+ * The server sends its build id with every API answer. If it changes while
+ * this page is open (a new ZIP was deployed), the page is running old code:
+ * show a banner asking for a reload at a convenient moment. No automatic
+ * reload, so nothing is lost in the middle of an operation.
+ */
+export function noticeVersion(version) {
+  if (!version) return;
+  firstVersion ??= version;
+  if (version === firstVersion || document.getElementById('update-banner')) return;
+  const bar = document.createElement('div');
+  bar.id = 'update-banner';
+  bar.setAttribute('role', 'status');
+  bar.textContent = 'システムが更新されました。作業の区切りで画面を再読み込みしてください。';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-small';
+  btn.textContent = '再読み込み';
+  btn.addEventListener('click', () => location.reload());
+  bar.append(' ', btn);
+  document.body.prepend(bar);
 }
 
 export const getJson = (url) => api('GET', url);

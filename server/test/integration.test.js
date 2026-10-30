@@ -125,3 +125,18 @@ test('結合：玉の登録から受付、自動振り分け、抽選、発券�
   const log = (await f.req('GET', '/api/staff/audit?limit=200', { cookie: admin })).json.rows.map((r) => r.type);
   for (const type of ['setInventory', 'rebalanceBalls', 'startSession', 'manualBall', 'finalizeResult', 'recordPrintResult', 'redeemPrize']) assert.ok(log.includes(type), `audit has ${type}`);
 });
+
+test('結合：画面の即時通知（SSE）がつながったままでも、サーバーはすぐ停止できる', async () => {
+  const f = await makeApp();
+  const base = await f.app.listen({ port: 0, host: '127.0.0.1' });
+  const op = await f.staff('operator');
+  const res = await fetch(`${base}/api/stream/staff`, { headers: { cookie: op } });
+  assert.equal(res.status, 200);
+  const reader = res.body.getReader();
+  await reader.read(); // the first view arrived: the stream is open
+  const started = Date.now();
+  await Promise.race([f.close(), new Promise((_, reject) => setTimeout(() => reject(new Error('close() hung with an open stream')), 3000))]);
+  assert.ok(Date.now() - started < 3000);
+  // The client sees the stream end (and EventSource would reconnect).
+  for (;;) { const { done } = await reader.read(); if (done) break; }
+});

@@ -10,7 +10,7 @@ const DEBOUNCE_MS = 120;
  * (debounced), and a comment every 15 s. EventSource reconnects by itself and
  * receives the latest full view, so a missed message never leaves stale state.
  */
-function openStream(request, reply, bus, project, { filter = () => true, tickMs = null } = {}) {
+function openStream(request, reply, bus, project, { filter = () => true, tickMs = null, open }) {
   reply.hijack();
   const res = reply.raw;
   res.writeHead(200, {
@@ -41,7 +41,9 @@ function openStream(request, reply, bus, project, { filter = () => true, tickMs 
   const ticker = tickMs ? setInterval(schedule, tickMs) : null;
   res.write('retry: 3000\n\n');
   send();
+  open.add(res);
   request.raw.on('close', () => {
+    open.delete(res);
     closed = true;
     unsubscribe();
     clearInterval(keepalive);
@@ -51,11 +53,20 @@ function openStream(request, reply, bus, project, { filter = () => true, tickMs 
 }
 
 export function streamRoutes(app, { auth, draw, devices, bus }) {
+  // Open streams are ended when the server stops; otherwise a hijacked SSE
+  // response keeps app.close() waiting until systemd kills the process, and
+  // the screens notice the restart late. The browsers reconnect by themselves.
+  const open = new Set();
+  app.addHook('preClose', async () => {
+    for (const res of open) res.end();
+    open.clear();
+  });
+
   app.get('/api/stream/staff', { preHandler: requireStaff(auth) }, async (request, reply) => {
-    openStream(request, reply, bus, () => staffView(draw, devices), { tickMs: 5_000 });
+    openStream(request, reply, bus, () => staffView(draw, devices), { tickMs: 5_000, open });
   });
 
   app.get('/api/stream/print', { preHandler: requireStaff(auth, 'printer', 'admin', 'operator') }, async (request, reply) => {
-    openStream(request, reply, bus, () => ({ jobs: printQueue(draw.getState()) }), { filter: (evt) => Boolean(evt.events?.some((e) => e.topic === 'print')) });
+    openStream(request, reply, bus, () => ({ jobs: printQueue(draw.getState()) }), { filter: (evt) => Boolean(evt.events?.some((e) => e.topic === 'print')), open });
   });
 }

@@ -47,6 +47,15 @@ export function createServices({ config, db, clock = nowJst }) {
   return { db, bus, draw, cards, devices, auth, maps, surveys, notices, clock };
 }
 
+/** Build id written by build-zip.sh next to server/ (VERSION); 'dev' otherwise. */
+function readAppVersion() {
+  try {
+    return fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'VERSION'), 'utf8').trim().slice(0, 64) || 'dev';
+  } catch {
+    return 'dev';
+  }
+}
+
 export function buildApp({ config, db = null, clock = nowJst, logger = false, services = null } = {}) {
   const ownDb = !db && !services;
   const database = services?.db ?? db ?? openDatabase(config.dbPath);
@@ -57,8 +66,17 @@ export function buildApp({ config, db = null, clock = nowJst, logger = false, se
   app.setErrorHandler(errorHandler);
   app.register(fastifyCookie);
   app.addContentTypeParser('image/jpeg', { parseAs: 'buffer', bodyLimit: 300 * 1024 }, (_req, body, done) => done(null, body));
-  app.addHook('onSend', async (_request, reply, payload) => {
+  const appVersion = config.appVersion ?? readAppVersion();
+  app.addHook('onSend', async (request, reply, payload) => {
     securityHeaders(reply);
+    if (request.url.startsWith('/api/') || request.url === '/health') {
+      // API answers are live data: never cached unless a route says otherwise
+      // (e.g. the QR image of a voucher number, which never changes).
+      if (!reply.hasHeader('Cache-Control')) reply.header('Cache-Control', 'no-store');
+      // Screens left open all day compare this with the first value they saw
+      // and ask staff to reload after a new ZIP is deployed.
+      reply.header('X-App-Version', appVersion);
+    }
     return payload;
   });
 

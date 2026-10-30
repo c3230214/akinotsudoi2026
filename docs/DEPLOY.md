@@ -84,11 +84,13 @@ sudo systemctl enable --now marugoto-bingo marugoto-bingo-backup.timer marugoto-
 curl -s http://127.0.0.1:3000/health
 ```
 
-`which node` が `/usr/bin/node` でない場合は、unitの `ExecStart` を書き換えます。Caddyは `Caddyfile.example` のホスト名を確定したものに書き換えて使います。SSEのために `flush_interval -1` を残してください。アプリは `127.0.0.1:3000` だけで待ち受けるので、外部からはCaddy経由でしか届きません。
+`which node` が `/usr/bin/node` でない場合は、unitの `ExecStart` を書き換えます。Caddyは `Caddyfile.example` のホスト名を確定したものに書き換えて使います。SSEのために `flush_interval -1` を残し、`encode` の対象から `text/event-stream` を外した設定（テンプレートのとおり）にしてください。圧縮すると通知がまとめて遅れて届くことがあるためです。アプリは `127.0.0.1:3000` だけで待ち受けるので、外部からはCaddy経由でしか届きません。
 
 ## 7. 更新（新しいZIPを入れる）
 
 新しいディレクトリに展開して `current` のリンクを付け替え、`systemctl restart marugoto-bingo` します。DBとアップロード画像は `/var/lib/marugoto-bingo` にあるので消えません。戻すときはリンクを前のディレクトリへ戻します。ただし新しい版でmigrationが追加されていた場合、古い版へは戻せないことがあります。更新前に手動バックアップを取ってください。
+
+キャッシュの扱いは次のとおりです。画面のHTML、JavaScript、CSSは `Cache-Control: no-cache` で、ブラウザは毎回サーバーに確認し、変わっていなければ304で手元の写しを使います。そのため、更新後に開き直した画面は新しい版になります。画像は1時間キャッシュするので、同じファイル名で画像を差し替えた場合は、最大1時間古い画像が出ることがあります。APIの応答は保存しません（`no-store`）。開いたままの画面（タブレット、WindowsPC）は古いプログラムのまま動き続けます。そこでサーバーは応答に版（ZIPの `VERSION`）を付け、変わったことに気付いた画面は「システムが更新されました」の帯を出します。作業の区切りで「再読み込み」を押してください。イベント中の更新は避け、どうしても必要なときは抽選中の台がないことを確かめてから行ってください。
 
 ```sh
 sudo -u marugoto-bingo node --env-file=/etc/marugoto-bingo/marugoto-bingo.env --disable-warning=ExperimentalWarning scripts/backup.js
