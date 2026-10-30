@@ -45,7 +45,9 @@ node --disable-warning=ExperimentalWarning scripts/devSeed.js   # 開発用デ�
 npm run dev
 ```
 
-`http://127.0.0.1:3000/visitor/` などを開きます。devSeedのスタッフは `admin`、`op1`、`op2`、`prize`、`printer`、パスコードは `dev-passcode` です。マップはサンプル配置で、正式な会場図ではありません。カメラによるQR読取はHTTPSかlocalhostでだけ動きます。
+`http://127.0.0.1:3000/visitor/` などを開きます。devSeedのスタッフは `admin`、`op1`、`op2`、`prize`、`printer`、パスコードは `dev-passcode` です。マップは完成版パンフレットから作った `server/config/map-2026.json` を起動時に取り込みます。カメラによるQR読取はHTTPSかlocalhostでだけ動きます。
+
+`npm test` の内訳は次のとおりです。`*.domain.test.js` と `rules`、`vision` は業務規則と画像判定の単体試験、`http.test.js` はAPIごとの試験です。`web.integration.test.js` は画面とサーバーのつながり（HTMLが読み込むファイルがすべて配信されるか、画面のimportとexportが合っているか、画面が呼ぶ `/api/` のパスがすべてサーバーにあるか）を確かめます。`integration.test.js` は、玉の登録からカード受付、カメラ1の自動振り分け、抽選、発券、引換、集計までの1日の流れを、HTTPとSSEを通して通しで確かめます。実機のカメラ、プリンター、タブレットは試験の対象外です。
 
 ## 本番へ
 

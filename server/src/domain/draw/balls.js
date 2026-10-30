@@ -1,16 +1,11 @@
 import { COLORS } from '../rules.js';
-import { fail, invalid } from '../errors.js';
+import { fail, invalid, requireReason } from '../errors.js';
 import {
   COLOR_LABELS, activeBalls, assertColor, availablePrizes, isStopped, machineOf, sessionOf,
 } from './state.js';
 
 export function needsReview(ball) {
   return ball.color === null || ball.orderUncertain || ball.reviewReason !== null;
-}
-
-function requireReason(reason) {
-  if (typeof reason !== 'string' || reason.trim().length < 2) invalid('理由を入力してください');
-  return reason.trim().slice(0, 500);
 }
 
 /**
@@ -294,8 +289,5 @@ export function resolveUnassigned(s, a, ctx) {
   return { touched: [entry.machineId, machine.id], message: '未割当玉を処理しました', result: { unassignedId: entry.id } };
 }
 
-export function resolveReviewNeeded(session) {
-  return activeBalls(session).some((b) => needsReview(b));
-}
 
 export { COLORS };

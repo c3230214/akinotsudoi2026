@@ -23,6 +23,7 @@ export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel
 
 export const COLOR_LABELS = { red: '赤', green: '緑', lightblue: '水色', white: '白' };
 export const COLORS = ['red', 'green', 'lightblue', 'white'];
+export const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 
 export function fmtTime(iso) {
   if (!iso) return '';

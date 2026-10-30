@@ -1,11 +1,6 @@
 import { COLORS } from '../rules.js';
-import { fail, invalid } from '../errors.js';
+import { fail, invalid, requireReason } from '../errors.js';
 import { COLOR_LABELS, machineOf, zeroColors } from './state.js';
-
-function requireReason(reason) {
-  if (typeof reason !== 'string' || reason.trim().length < 2) invalid('理由を入力してください');
-  return reason.trim().slice(0, 500);
-}
 
 function countMap(input, { allowZeroTotal = true } = {}) {
   if (!input || typeof input !== 'object') invalid('色ごとの個数を指定してください');

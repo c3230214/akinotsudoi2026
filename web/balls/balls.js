@@ -1,6 +1,7 @@
-import { ApiError, getJson, operationId, postJson, sendWithRetry } from '../shared/api.js';
+import { getJson } from '../shared/api.js';
 import { $, $$, COLORS, COLOR_LABELS, html, raw, render, toast } from '../shared/html.js';
 import { openStream } from '../shared/stream.js';
+import { ballChip, sendCommand as command, showError } from '../shared/staffkit.js';
 
 // Ball and prize dashboard for the Windows PC (2026-10-30 request). Staff
 // enter the prize counts and the ball stock; the server proposes how many
@@ -9,23 +10,7 @@ import { openStream } from '../shared/stream.js';
 // records what was moved. Every change goes through the server (admin only).
 
 const st = { me: null, view: null, plan: null, sizes: {}, planKey: '', busy: false, dirty: {} };
-const ballChip = (c, label) => html`<span class="chip"><span class="ball ball-${c}" aria-hidden="true"></span>${label ?? COLOR_LABELS[c]}</span>`;
 const sum = (o) => COLORS.reduce((a, c) => a + (o[c] ?? 0), 0);
-
-function showError(error) {
-  toast(error instanceof ApiError ? error.message : String(error?.message ?? error), { kind: 'error', ms: 6000 });
-}
-
-async function command(body) {
-  try {
-    const out = await sendWithRetry('/api/staff/commands', { operationId: operationId(), ...body });
-    if (out?.message) toast(out.message, { kind: 'ok' });
-    return out;
-  } catch (error) {
-    showError(error);
-    return null;
-  }
-}
 
 async function boot() {
   try { st.me = await getJson('/api/staff/me'); } catch { st.me = null; }

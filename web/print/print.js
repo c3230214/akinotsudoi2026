@@ -1,6 +1,7 @@
-import { getJson, operationId, postJson, sendWithRetry } from '../shared/api.js';
+import { getJson, operationId, sendWithRetry } from '../shared/api.js';
 import { $, $$, COLOR_LABELS, fmtDateTime, fmtTime, html, render, toast } from '../shared/html.js';
 import { openStream } from '../shared/stream.js';
+import { mountLogin } from '../shared/staffkit.js';
 
 // Print station. The voucher printer is an SII MP-B20 (58 mm, USB/Bluetooth,
 // no Wi-Fi). Browser printing reaches it only through the Windows printer
@@ -49,14 +50,7 @@ async function boot() {
 }
 
 function login() {
-  render($('#app'), html`<form id="login" class="panel stack"><h2>スタッフアカウントでログイン</h2>
-    <label for="ln">ログイン名</label><input id="ln" autocomplete="username" autocapitalize="off" required>
-    <label for="pw">パスコード</label><input id="pw" type="password" autocomplete="current-password" required>
-    <button class="btn">ログイン</button></form>`);
-  $('#login').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try { await postJson('/api/staff/login', { loginName: $('#ln').value, passcode: $('#pw').value }); location.reload(); } catch (error) { toast(error.message, { kind: 'error' }); }
-  });
+  mountLogin($('#app'));
 }
 
 function draw() {

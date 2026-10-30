@@ -15,7 +15,6 @@ export const CARD_GRID = Object.freeze({
 });
 // The 抽選確認 corner is the triangle above the line (0.741, 0) – (1, 0.178).
 const CUT = { u0: 889 / 1200, v1: 302 / 1700 };
-export const CARD_ASPECT = 1700 / 1200;
 
 /**
  * Projective map from the unit square to a quadrilateral (Heckbert).

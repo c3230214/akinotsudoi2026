@@ -1,7 +1,8 @@
-import { ApiError, getJson, operationId, postJson, sendWithRetry } from '../shared/api.js';
-import { $, $$, COLORS, COLOR_LABELS, fmtTime, html, previewDraws, raw, render, toast } from '../shared/html.js';
+import { CommandQueue, getJson, operationId, postJson, sendWithRetry } from '../shared/api.js';
+import { $, $$, CIRCLED, COLORS, COLOR_LABELS, fmtTime, html, previewDraws, raw, render, toast } from '../shared/html.js';
 import { openStream } from '../shared/stream.js';
 import { scanQr } from '../shared/scanner.js';
+import { keepAwake, mountLogin, printStatusLabel, sendCommand as command, showError } from '../shared/staffkit.js';
 
 // Machine tablet: the iPad runs /garagara1/, the Pixel Tablet /garagara2/.
 // The page names the machine it is for; the server still decides what the
@@ -13,24 +14,14 @@ import { scanQr } from '../shared/scanner.js';
 // the staff member always confirms them.
 
 const MACHINE_ID = document.body.dataset.machine;
-const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 const st = { me: null, view: null, step: 'home', done: null, readMarks: null, readId: null, usedHints: new Set(), busy: false };
 
 const machine = () => st.view?.machines.find((m) => m.id === MACHINE_ID) ?? null;
 const gradeOf = (color) => st.view.settings.grades.find((g) => g.color === color);
 
-function showError(error) {
-  toast(error instanceof ApiError ? error.message : String(error?.message ?? error), { kind: 'error', ms: 6000 });
-}
-
-async function command(body) {
-  try {
-    return await sendWithRetry('/api/staff/commands', { operationId: operationId(), ...body }, { onRetry: () => toast('通信を再試行しています…') });
-  } catch (error) {
-    showError(error);
-    return null;
-  }
-}
+// Colour taps are queued and sent one by one, so two quick taps (two balls)
+// are both recorded and never sent twice (same as the staff screen).
+const queue = new CommandQueue();
 
 async function accept(body) {
   const m = machine();
@@ -71,32 +62,8 @@ async function boot() {
   keepAwake();
 }
 
-/** Keep the tablet screen on while the page is open (where supported). */
-async function keepAwake() {
-  try {
-    if (!('wakeLock' in navigator)) return;
-    await navigator.wakeLock.request('screen');
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') navigator.wakeLock.request('screen').catch(() => {}); });
-  } catch { /* not allowed; the device's own sleep setting applies */ }
-}
-
 function showLogin() {
-  render($('#app'), html`
-    <form id="login" class="panel login stack">
-      <h1>${document.title.split('｜')[0]}</h1>
-      <label for="login-name">ログイン名</label>
-      <input id="login-name" autocomplete="username" autocapitalize="off" required>
-      <label for="login-pass">パスコード</label>
-      <input id="login-pass" type="password" autocomplete="current-password" required>
-      <button class="btn btn-block">ログイン</button>
-    </form>`);
-  $('#login').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await postJson('/api/staff/login', { loginName: $('#login-name').value, passcode: $('#login-pass').value });
-      location.reload();
-    } catch (error) { showError(error); }
-  });
+  mountLogin($('#app'), { title: document.title.split('｜')[0] });
 }
 
 // ---------- render ----------
@@ -230,7 +197,7 @@ function viewDrawing(m) {
 function viewDone() {
   const d = st.done;
   const rec = st.view.recentSessions.find((x) => x.id === d.sessionId);
-  const status = rec?.voucher ? { queued: 'WindowsPCで印刷待ち', printing: '印刷中', dispatched: '印刷しました（券が出たか確認してください）', confirmed: '券が出ました', failed: '印刷に失敗しました。再印刷しています', none: '未印刷' }[rec.voucher.printStatus] ?? rec.voucher.printStatus : '';
+  const status = rec?.voucher ? printStatusLabel(rec.voucher) : '';
   return html`<section class="panel done">
     <h2>引換券 ${d.sessionId}</h2>
     <ul class="results">${d.prizes.map((p, i) => html`<li><span class="ord">${i + 1}回目</span><span class="ball ball-${p.color}" aria-hidden="true"></span><b>${p.grade}等</b> ${p.prize}</li>`)}</ul>
@@ -243,9 +210,8 @@ function viewDone() {
 function recentVouchers(m) {
   const list = st.view.recentSessions.filter((x) => x.machineId === m.id && x.voucher).slice(0, 4);
   if (!list.length) return '';
-  const label = (v) => (v.redeemedAt ? '引換済み' : { queued: '印刷待ち', printing: '印刷中', dispatched: '印刷済み（排紙未確認）', confirmed: '印刷済み', failed: '印刷失敗' }[v.printStatus] ?? v.printStatus);
   return html`<section class="panel"><h2>この台の最近の引換券</h2><ul class="plain">${list.map((x) => html`
-    <li class="row"><b>${x.id}</b> ${x.voucher.prizes.map((p) => `${p.grade}等`).join('・')}　${label(x.voucher)}
+    <li class="row"><b>${x.id}</b> ${x.voucher.prizes.map((p) => `${p.grade}等`).join('・')}　${printStatusLabel(x.voucher)}
       ${x.voucher.redeemedAt ? '' : html`<button class="btn btn-small btn-plain" data-reprint="${x.id}">同じ番号で再印刷</button>`}</li>`)}</ul></section>`;
 }
 
@@ -284,18 +250,11 @@ function bind() {
   for (const b of $$('[data-act]')) b.addEventListener('click', () => act(b.dataset.act, b));
 }
 
-async function ball(color) {
+function ball(color) {
   const m = machine();
   const s = m?.activeSession;
-  if (!s || st.busy) return;
-  st.busy = true;
-  try {
-    await sendWithRetry('/api/staff/commands', { operationId: operationId(), type: 'manualBall', machineId: m.id, sessionId: s.id, color });
-  } catch (error) {
-    showError(error);
-  } finally {
-    st.busy = false;
-  }
+  if (!s) return;
+  queue.push({ type: 'manualBall', machineId: m.id, sessionId: s.id, color }).catch(showError);
 }
 
 async function act(name, el) {
@@ -339,6 +298,7 @@ async function act(name, el) {
       await command({ type: 'removeManualBall', machineId: m.id, sessionId: m.activeSession.id, ballId: el.dataset.id, reason: 'タブレットで入力を取り消し' });
       break;
     case 'finalize': {
+      if (queue.pending) { toast('色の送信が終わるまで待ってください', { kind: 'error' }); return; }
       if (!$('#tray').checked) { toast('受け皿の玉を回収してチェックしてください', { kind: 'error' }); return; }
       const out = await command({ type: 'finalizeResult', machineId: m.id, sessionId: m.activeSession.id, trayEmptied: true });
       if (out) { st.done = { sessionId: out.result.sessionId, prizes: out.result.prizes }; draw(); }

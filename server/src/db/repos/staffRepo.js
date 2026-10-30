@@ -7,10 +7,6 @@ export function findStaffByLogin(db, loginName) {
   return toStaff(db.prepare('SELECT * FROM staff WHERE login_name = ?').get(loginName));
 }
 
-export function findStaffById(db, staffId) {
-  return toStaff(db.prepare('SELECT * FROM staff WHERE staff_id = ?').get(staffId));
-}
-
 export function listStaff(db) {
   return db.prepare('SELECT * FROM staff ORDER BY staff_id').all().map((r) => {
     const { passcodeHash, ...rest } = toStaff(r);

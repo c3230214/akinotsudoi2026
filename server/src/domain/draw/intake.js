@@ -1,6 +1,6 @@
 import { COLORS, completeLines, entitledDraws, validateMarks } from '../rules.js';
 import { fail, invalid } from '../errors.js';
-import { COLOR_LABELS, availablePrizes, isStopped, machineOf } from './state.js';
+import { COLOR_LABELS, availablePrizes, machineOf } from './state.js';
 
 export function requireIntakeAllowed(s, machine, ctx) {
   if (s.intakeClosed?.closed) fail('INTAKE_CLOSED', `新規受付は終了しています（${s.intakeClosed.reason}）`);

@@ -1,10 +1,5 @@
-import { fail, invalid } from '../errors.js';
+import { fail, invalid, requireReason } from '../errors.js';
 import { machineOf } from './state.js';
-
-function requireReason(reason) {
-  if (typeof reason !== 'string' || reason.trim().length < 2) invalid('理由を入力してください');
-  return reason.trim().slice(0, 500);
-}
 
 /**
  * Software stop only. It blocks intake and finalisation for the machine; it

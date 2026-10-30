@@ -1,10 +1,10 @@
-import { ApiError, CommandQueue, api, getJson, operationId, postJson, sendWithRetry } from '../shared/api.js';
-import { $, $$, COLORS, COLOR_LABELS, fmtDateTime, fmtTime, html, previewDraws, raw, render, toast } from '../shared/html.js';
+import { CommandQueue, api, getJson, operationId, postJson, sendWithRetry } from '../shared/api.js';
+import { $, $$, CIRCLED, COLORS, COLOR_LABELS, fmtDateTime, fmtTime, html, previewDraws, raw, render, toast } from '../shared/html.js';
 import { openStream } from '../shared/stream.js';
 import { scanQr } from '../shared/scanner.js';
 import { surveyDistributionTable, surveyMeansTable } from '../shared/surveyTable.js';
+import { ballChip, mountLogin, printStatusLabel, showError as showErrorToast } from '../shared/staffkit.js';
 
-const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 const ROLE_LABELS = { admin: '管理者', operator: '台担当', prize: '景品担当', printer: '発券端末' };
 const TABS = [
   { id: 'draw', label: '受付・抽選', roles: ['admin', 'operator'] },
@@ -29,13 +29,11 @@ const st = {
 const queue = new CommandQueue({ onChange: (n) => { const el = $('#queue'); if (el) el.textContent = n ? `送信待ち ${n} 件` : ''; } });
 
 // ---------- helpers ----------
-const ballChip = (color, label) => html`<span class="chip"><span class="ball ball-${color ?? 'null'}" aria-hidden="true"></span>${label ?? (color ? COLOR_LABELS[color] : '未判定')}</span>`;
 const machine = () => st.view?.machines.find((m) => m.id === st.me.machineId) ?? null;
 const isAdmin = () => st.me?.staff.role === 'admin';
 
 function showError(error) {
-  const msg = error instanceof ApiError ? error.message : String(error?.message ?? error);
-  toast(msg, { kind: 'error', ms: 6000 });
+  showErrorToast(error);
   if (error?.code === 'REVISION_CONFLICT' || error?.code === 'SESSION_NOT_ACTIVE') refreshView();
 }
 
@@ -136,24 +134,7 @@ async function boot() {
 }
 
 function showLogin() {
-  render($('#app'), html`
-    <form id="login" class="panel login stack">
-      <h1>スタッフログイン</h1>
-      <label for="login-name">ログイン名</label>
-      <input id="login-name" name="loginName" autocomplete="username" autocapitalize="off" required>
-      <label for="login-pass">パスコード</label>
-      <input id="login-pass" name="passcode" type="password" autocomplete="current-password" required>
-      <button class="btn btn-block" type="submit">ログイン</button>
-      <p class="muted">引換券の印刷は <a href="/print/">発券画面</a> で行います。</p>
-    </form>`);
-  $('#login').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target);
-    try {
-      await postJson('/api/staff/login', { loginName: f.get('loginName'), passcode: f.get('passcode') });
-      location.reload();
-    } catch (error) { showError(error); }
-  });
+  mountLogin($('#app'), { title: 'スタッフログイン', note: html`<p class="muted">台担当は <a href="/garagara1/">ガラガラ1</a>／<a href="/garagara2/">ガラガラ2</a>、WindowsPCは <a href="/pc/">WindowsPC画面</a> を使います。</p>` });
 }
 
 // ---------- main render ----------
@@ -324,8 +305,7 @@ function viewSession(m) {
 }
 
 function printLabel(v) {
-  if (v.redeemedAt) return `引換済み ${fmtTime(v.redeemedAt)}`;
-  return { none: '未印刷', queued: '印刷待ち', dispatched: '印刷指示済み（排紙未確認）', confirmed: '排紙確認済み', failed: '印刷失敗' }[v.printStatus] ?? v.printStatus;
+  return v.redeemedAt ? `引換済み ${fmtTime(v.redeemedAt)}` : printStatusLabel(v);
 }
 
 function viewMachineVouchers(m) {

@@ -7,9 +7,9 @@
 // 「達成済み」. Tapping a cell opens its QR scan; ⑤ is achieved by the tap.
 // Use of the illustrations and the mascots on the web was approved by e-mail
 // (user report, 2026-10-30, DECISIONS U04).
-import { html } from '../shared/html.js';
+import { CIRCLED, html } from '../shared/html.js';
 
-export const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
+export { CIRCLED };
 export const TAP_CELLS = [4];
 const STICKERS = ['goodjob', 'amazing', 'champion', 'genius', 'fantastic'];
 

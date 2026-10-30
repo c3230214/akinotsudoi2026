@@ -1,5 +1,5 @@
 import { COLORS } from '../rules.js';
-import { fail, invalid } from '../errors.js';
+import { fail, invalid, requireReason } from '../errors.js';
 import { COLOR_LABELS, availablePrizes, gradeOf, machineOf, zeroColors } from './state.js';
 
 /**
@@ -165,11 +165,11 @@ export function rebalanceBalls(s, a) {
 export function adjustPrizeTotal(s, a) {
   if (!COLORS.includes(a.color)) invalid('color is required');
   if (!Number.isInteger(a.total) || a.total < 0 || a.total > 100000) invalid('景品数は0〜100000の整数です');
-  if (typeof a.reason !== 'string' || a.reason.trim().length < 2) invalid('理由を入力してください');
+  const reason = requireReason(a.reason);
   const g = s.settings.grades.find((x) => x.color === a.color);
   if (a.total < s.prizes[a.color].allocated) fail('BELOW_ALLOCATED', `${g.grade}等はすでに${s.prizes[a.color].allocated}個当選しています`);
   const before = g.total;
   s.settings.grades = s.settings.grades.map((x) => (x.color === a.color ? { ...x, total: a.total } : x));
   s.settingsVersion += 1;
-  return { touched: [], message: `${g.grade}等（${COLOR_LABELS[a.color]}）の景品数を${before}から${a.total}にしました（${a.reason.trim().slice(0, 200)}）`, result: { color: a.color, total: a.total } };
+  return { touched: [], message: `${g.grade}等（${COLOR_LABELS[a.color]}）の景品数を${before}から${a.total}にしました（${reason}）`, result: { color: a.color, total: a.total } };
 }

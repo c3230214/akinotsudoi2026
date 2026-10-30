@@ -23,6 +23,17 @@ function checkCommon(body, machineId, seqKey) {
   if (!Number.isInteger(body[seqKey]) || body[seqKey] < 1 || body[seqKey] > 1e9) invalid(`${seqKey} must be a positive integer`);
 }
 
+/** Lines, draws and undecided cells for a paper card read (null = unsure). */
+function paperPreview(cells) {
+  const lines = completeLines(cells);
+  return { lines, draws: entitledDraws(lines), unsure: cells.filter((c) => c === null).length };
+}
+
+function validatePaperRead(body) {
+  validateMarks(body.cells, { allowNull: true });
+  if (typeof body.cornerPresent !== 'boolean' && body.cornerPresent !== null) invalid('cornerPresent must be boolean or null');
+}
+
 export function createDeviceService({ db, clock, draw, bus, imageDir, imageRetentionDays, cards }) {
   const online = new Map();
   for (const row of listMachineRows(db)) if (row.lastHeartbeatAt) online.set(row.machineId, Date.parse(row.lastHeartbeatAt));
@@ -95,8 +106,7 @@ export function createDeviceService({ db, clock, draw, bus, imageDir, imageReten
     let qrCardId = null;
     let qrError = null;
     if (body.kind === 'paper') {
-      validateMarks(body.cells, { allowNull: true });
-      if (typeof body.cornerPresent !== 'boolean' && body.cornerPresent !== null) invalid('cornerPresent must be boolean or null');
+      validatePaperRead(body);
     } else {
       if (typeof body.qrPayload !== 'string' || body.qrPayload.length > 300) invalid('qrPayload is required for digital cards');
       try {
@@ -220,10 +230,8 @@ export function createDeviceService({ db, clock, draw, bus, imageDir, imageReten
     let qrCardId = null;
     let preview = null;
     if (body.kind === 'paper') {
-      validateMarks(body.cells, { allowNull: true });
-      if (typeof body.cornerPresent !== 'boolean' && body.cornerPresent !== null) invalid('cornerPresent must be boolean or null');
-      const lines = completeLines(body.cells);
-      preview = { lines, draws: entitledDraws(lines), unsure: body.cells.filter((c) => c === null).length };
+      validatePaperRead(body);
+      preview = paperPreview(body.cells);
       if (auto && preview.draws === 0 && preview.unsure === 0) fail('NO_LINES', 'ラインがそろっていない紙カードです', { status: 422 });
     } else {
       if (typeof body.qrPayload !== 'string' || body.qrPayload.length > 300) invalid('qrPayload is required');
@@ -294,10 +302,7 @@ export function createDeviceService({ db, clock, draw, bus, imageDir, imageReten
   function withPreview(read) {
     if (!read) return read;
     if (read.qrCardId) return { ...read, preview: cards.previewById(read.qrCardId) };
-    if (read.cells) {
-      const lines = completeLines(read.cells);
-      return { ...read, preview: { lines, draws: entitledDraws(lines), unsure: read.cells.filter((c) => c === null).length } };
-    }
+    if (read.cells) return { ...read, preview: paperPreview(read.cells) };
     return read;
   }
 

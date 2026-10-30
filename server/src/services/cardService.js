@@ -4,16 +4,11 @@ import {
   listStamps, markCardUsed,
 } from '../db/repos/cardRepo.js';
 import { closeCardRead, findCardRead } from '../db/repos/deviceRepo.js';
-import { fail, invalid } from '../domain/errors.js';
+import { fail, invalid, requireReason } from '../domain/errors.js';
 import { TAP_CELLS, cardPayload, cellForPoint, isCardId, marksFromStamps, parseCardPayload, parseStampPayload, toCardView } from '../domain/card/cardModel.js';
 import { CELLS } from '../domain/card/cardLayout.js';
 import { validateMarks } from '../domain/rules.js';
 import { cardClaim, newCardId, randomToken, safeEqual, sha256 } from './secrets.js';
-
-function requireReason(reason, message) {
-  if (typeof reason !== 'string' || reason.trim().length < 2) invalid(message);
-  return reason.trim().slice(0, 500);
-}
 
 export function createCardService({ db, clock, draw, claimSecret, bus }) {
   const centerMarked = () => draw.getState().settings.centerMarkedOnIssue;

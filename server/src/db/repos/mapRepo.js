@@ -15,11 +15,6 @@ export function listPlaces(db, { publishedOnly = true } = {}) {
     .all(publishedOnly ? 1 : 0).map(toPlace);
 }
 
-export function findPlace(db, placeId) {
-  const r = db.prepare('SELECT * FROM map_places WHERE place_id = ?').get(placeId);
-  return r ? toPlace(r) : null;
-}
-
 export function listPrograms(db, stageId = null) {
   return db.prepare('SELECT * FROM stage_programs WHERE (? IS NULL OR stage_id = ?) ORDER BY starts_at, sort_order, program_id')
     .all(stageId, stageId).map(toProgram);

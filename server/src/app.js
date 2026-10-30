@@ -104,6 +104,8 @@ export function buildApp({ config, db = null, clock = nowJst, logger = false, se
     app.get('/vendor/jsQR.js', async (_request, reply) => reply.type('text/javascript; charset=utf-8').header('Cache-Control', 'public, max-age=86400').send(fs.createReadStream(jsqr)));
     app.get('/', async (_request, reply) => reply.redirect('/visitor/'));
     app.get('/staff/print-station', async (_request, reply) => reply.redirect('/print/'));
+    // Browsers ask for this on every screen; answer without a 404 in the logs.
+    app.get('/favicon.ico', async (_request, reply) => reply.code(204).header('Cache-Control', 'public, max-age=86400').send());
   }
 
   app.setNotFoundHandler(async (_request, reply) => reply.code(404).send({ error: 'NOT_FOUND' }));
@@ -112,6 +114,3 @@ export function buildApp({ config, db = null, clock = nowJst, logger = false, se
   return app;
 }
 
-export function resolveWebFile(config, ...parts) {
-  return path.join(config.webDir, ...parts);
-}

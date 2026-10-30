@@ -19,3 +19,9 @@ export function fail(code, message, options) {
 export function invalid(message, details) {
   throw new DomainError('VALIDATION_FAILED', message, { status: 422, details });
 }
+
+/** A free-text reason (at least two characters), trimmed to 500 characters. */
+export function requireReason(reason, message = '理由を入力してください') {
+  if (typeof reason !== 'string' || reason.trim().length < 2) invalid(message);
+  return reason.trim().slice(0, 500);
+}
