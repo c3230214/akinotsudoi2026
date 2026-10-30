@@ -2,6 +2,7 @@ import { ApiError, CommandQueue, api, getJson, operationId, postJson, sendWithRe
 import { $, $$, COLORS, COLOR_LABELS, fmtDateTime, fmtTime, html, previewDraws, raw, render, toast } from '../shared/html.js';
 import { openStream } from '../shared/stream.js';
 import { scanQr } from '../shared/scanner.js';
+import { surveyDistributionTable, surveyMeansTable } from '../shared/surveyTable.js';
 
 const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 const ROLE_LABELS = { admin: '管理者', operator: '台担当', prize: '景品担当', printer: '発券端末' };
@@ -108,7 +109,9 @@ async function boot() {
       <option value="">担当台を選択</option>
       ${st.me.machines.map((m) => html`<option value="${m.id}" ${m.id === st.me.machineId ? raw('selected') : ''}>${m.name}</option>`)}
     </select>
-    <a class="btn btn-plain btn-small" href="/print/" target="mb-print">発券画面</a>
+    <a class="btn btn-plain btn-small" href="/garagara1/">ガラガラ1（iPad）</a>
+    <a class="btn btn-plain btn-small" href="/garagara2/">ガラガラ2（Pixel）</a>
+    <a class="btn btn-plain btn-small" href="/pc/">WindowsPC（カメラ・発券）</a>
     <button type="button" class="btn btn-plain btn-small" id="logout">ログアウト</button>`.value;
   $('#machine-select').addEventListener('change', async (e) => {
     try {
@@ -672,14 +675,6 @@ async function act(name, id, el) {
   }
 }
 
-function surveyTable(sum) {
-  const head = html`<tr><th>区分</th><th class="num">回答数</th><th class="num">満足度平均</th>${sum.satisfaction.labels.map((x) => html`<th class="num">${x.code} ${x.label}</th>`)}</tr>`;
-  const row = (r) => html`<tr><td>${r.label}</td><td class="num">${r.count}</td><td class="num">${r.mean ?? '－'}</td>${sum.satisfaction.labels.map((x) => html`<td class="num">${r.distribution[x.code]}</td>`)}</tr>`;
-  return html`<div class="table-wrap"><table><thead>${head}</thead><tbody>
-    ${row({ label: '全体', count: sum.total, mean: sum.satisfaction.mean, distribution: sum.satisfaction.distribution })}
-    ${sum.byAge.map(row)}${sum.byGender.map(row)}</tbody></table></div>`;
-}
-
 async function lookupVoucher(text) {
   try {
     st.redeem = await getJson(`/api/staff/vouchers/${encodeURIComponent(String(text).trim().toUpperCase())}`);
@@ -784,8 +779,9 @@ async function adminAct(name) {
           <label for="sv-consent">同意文</label><textarea id="sv-consent">${cfg.consentText}</textarea>
           <label class="check"><input type="checkbox" id="sv-gift" ${cfg.giftEnabled ? raw('checked') : ''}> 回答者へのお礼を記録する</label>
           <button class="btn" id="sv-save">保存</button>
-          <h3>集計（回答 ${sum.total} 件、満足度の平均 ${sum.satisfaction.mean ?? '－'}）</h3>
-          ${surveyTable(sum)}
+          <h3>集計（回答 ${sum.total} 件）</h3>
+          ${surveyDistributionTable(sum)}
+          ${surveyMeansTable(sum)}
           <p><a class="btn btn-plain btn-small" href="/api/admin/export/surveys.csv">アンケートCSV（コード付き）</a></p>`);
         $('#sv-save').addEventListener('click', async () => {
           try {

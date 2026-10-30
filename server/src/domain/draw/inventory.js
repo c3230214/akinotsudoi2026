@@ -110,3 +110,11 @@ export function setInputMode(s, a) {
   m.inputMode = a.mode;
   return { touched: [m.id], message: `${m.name}を${a.mode === 'auto' ? '自動読取' : '手入力'}モードにしました`, result: {} };
 }
+
+/** Turn camera assistance on or off for one machine (2026-10-30 request). */
+export function setCameraAssist(s, a) {
+  const machine = machineOf(s, a.machineId);
+  if (typeof a.enabled !== 'boolean') invalid('enabled must be boolean');
+  machine.cameraAssist = a.enabled;
+  return { touched: [machine.id], message: `${machine.name}のカメラ自動認識を${a.enabled ? 'オン' : 'オフ'}にしました`, result: { cameraAssist: a.enabled } };
+}

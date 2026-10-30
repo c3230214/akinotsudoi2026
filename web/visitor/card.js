@@ -1,14 +1,29 @@
-// Digital bingo card in the layout approved by the city (2026-10-28):
-// title block on the left, おがっきぃ on the top right, 3x3 cells, a line
-// counter and the draw rule. Each cell shows the paper card's cell artwork
-// (assets/cell-N.webp, cut from the organisers' PDF), so wording, colours and
-// illustrations match the paper card. Tapping a cell opens its QR scan; ⑤
-// has no QR and is achieved by the tap itself.
-// TODO(DECISION-U04): confirm the illustrations' terms allow web distribution.
+// Digital bingo card in the layout approved by the city: title block on the
+// left, おがっきぃ on the top right, 3x3 cells, a line counter and the draw
+// rule (2026-10-30: back to the earlier HTML cells instead of the paper card
+// pasted as images). Wording, colours and illustrations come from the paper
+// card; the illustrations are cut from the organisers' PDF. A marked cell is
+// covered by one of the organisers' stickers (Good Job etc.) with the words
+// 「達成済み」. Tapping a cell opens its QR scan; ⑤ is achieved by the tap.
+// Use of the illustrations and the mascots on the web was approved by e-mail
+// (user report, 2026-10-30, DECISIONS U04).
 import { html } from '../shared/html.js';
 
 export const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
 export const TAP_CELLS = [4];
+const STICKERS = ['goodjob', 'amazing', 'champion', 'genius', 'fantastic'];
+
+// Labels with furigana as printed on the paper card.
+const R = (kanji, kana) => html`<ruby>${kanji}<rt>${kana}</rt></ruby>`;
+const LABELS = {
+  committee: html`${R('実行委員会企画', 'じっこういいんかいきかく')}を<br>${R('体験', 'たいけん')}しよう`,
+  panel_feedback: html`パネルをみて<br>${R('感想', 'かんそう')}を${R('書', 'か')}こう`,
+  workshop: html`${R('体験工房', 'たいけんこうぼう')}で<br>${R('体験', 'たいけん')}しよう`,
+  participation: html`ビンゴに<br>${R('参加', 'さんか')}しよう`,
+  stage_feedback: html`${R('発表', 'はっぴょう')}をみて<br>${R('感想', 'かんそう')}を${R('書', 'か')}こう`,
+};
+// Cells 7 and 8 carry a decoration along the top (curtain, bunting) instead of an icon.
+const DECO_TOP = [6, 7];
 
 function lineMessage(card) {
   if (card.used) return html`<span class="lb-right is-used">抽選済み</span>`;
@@ -19,10 +34,12 @@ function lineMessage(card) {
 export function renderCardFace(card) {
   const cells = card.cells.map((c) => html`
     <li class="cell-slot">
-      <button type="button" class="cell${c.marked ? ' is-marked' : ''}" data-cell="${c.index}"
+      <button type="button" class="cell bg-${c.backgroundFamily ?? 'white'}${DECO_TOP.includes(c.index) ? ' deco-top' : ''}${c.marked ? ' is-marked' : ''}" data-cell="${c.index}"
         aria-label="${CIRCLED[c.index]} ${c.label}：${c.marked ? '達成済み' : TAP_CELLS.includes(c.index) ? 'まだ。タップすると達成' : 'まだ。タップしてQRコードを読み取る'}">
-        <img class="cell-art" src="/assets/cell-${c.index + 1}.webp" alt="" width="420" height="400" decoding="async">
-        ${c.marked ? html`<span class="cell-done" aria-hidden="true">達成済み</span>` : ''}
+        <span class="cell-no" aria-hidden="true">${CIRCLED[c.index]}</span>
+        <span class="cell-label" aria-hidden="true">${LABELS[c.category] ?? c.label}</span>
+        <img class="cell-illus" src="/assets/illus-${c.index + 1}.webp" alt="" decoding="async">
+        ${c.marked ? html`<span class="cell-done" aria-hidden="true"><img src="/assets/sticker-${STICKERS[c.index % STICKERS.length]}.webp" alt="" decoding="async"><span class="cell-done-text">達成済み</span></span>` : ''}
       </button>
     </li>`);
   return html`

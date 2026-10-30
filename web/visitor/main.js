@@ -214,20 +214,30 @@ function openDetail(place) {
   const labels = state.map.detailLabels ?? {};
   let body;
   if (place.kind === 'stage') {
-    const programs = state.map.programs.filter((g) => g.stageId === place.id).sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+    const programs = state.map.programs.filter((g) => g.stageId === place.id)
+      .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    // The final schedule gives one time range per part (第1部, 第2部), not per
+    // performer, so programmes sharing a range are listed under one time in order.
+    const groups = [];
+    for (const g of programs) {
+      const last = groups[groups.length - 1];
+      if (last && last.startsAt === g.startsAt && last.endsAt === g.endsAt) last.items.push(g);
+      else groups.push({ startsAt: g.startsAt, endsAt: g.endsAt, items: [g] });
+    }
     body = html`
       <p class="kind-tag">${KIND_LABELS.stage}</p>
       ${place.description ? html`<p>${place.description}</p>` : ''}
       ${programs.length === 0 ? html`<p class="notice">ステージ予定は準備中です。</p>` : html`
-      <ol class="timeline" aria-label="ステージプログラム">${programs.map((g) => html`
-        <li class="tl-item${g.status === 'cancelled' ? ' is-cancelled' : ''}">
-          <p class="tl-time">${fmtTime(g.startsAt)}〜${g.endsAt ? fmtTime(g.endsAt) : ''}</p>
-          <div class="tl-body">
-            <p class="tl-title">${g.title}${g.status === 'cancelled' ? html` <span class="chip">中止</span>` : g.status === 'changed' ? html` <span class="chip">変更あり</span>` : ''}</p>
-            ${g.organizer ? html`<p class="muted">${g.organizer}</p>` : ''}
-            ${g.description ? html`<p>${g.description}</p>` : ''}
-          </div>
-        </li>`)}</ol>`}`;
+      <ol class="timeline" aria-label="ステージプログラム">${groups.map((grp) => html`
+        <li class="tl-item">
+          <p class="tl-time">${fmtTime(grp.startsAt)}〜${grp.endsAt ? fmtTime(grp.endsAt) : ''}</p>
+          <ol class="tl-body tl-list">${grp.items.map((g) => html`
+            <li class="${g.status === 'cancelled' ? 'is-cancelled' : ''}">
+              <p class="tl-title">${g.organizer ? html`${g.organizer}<span class="muted">（${g.title}）</span>` : g.title}${g.status === 'cancelled' ? html` <span class="chip">中止</span>` : g.status === 'changed' ? html` <span class="chip">変更あり</span>` : ''}</p>
+              ${g.description ? html`<p class="muted small">${g.description}</p>` : ''}
+            </li>`)}</ol>
+        </li>`)}</ol>
+      ${groups.some((grp) => grp.items.length > 1) ? html`<p class="muted small">各部の中は出演順です。</p>` : ''}`}`;
   } else {
     const details = Object.entries(labels).filter(([k]) => place.details?.[k]);
     body = html`
@@ -260,13 +270,16 @@ async function loadSurvey() {
       <p><a class="btn btn-block" href="#card">ビンゴカードに戻る</a></p>
       ${s.giftEnabled ? html`<p>${s.giftAt ? 'お礼はお渡し済みです。' : '景品交換所でカードのQRを見せるとお礼を受け取れます。'}</p>` : ''}`);
   }
+  const scale = [...s.satisfaction].sort((a, b) => a.code - b.code);
+  const [scaleLow, scaleHigh] = [scale[0], scale[scale.length - 1]];
   const radios = (name, list) => list.map((label) => html`<label class="chip-opt"><input type="radio" name="${name}" value="${label}" required><span>${label}</span></label>`);
   render(root, html`
     ${title}
     <form id="survey-form" class="survey">
       <fieldset><legend>年代</legend><div class="opts opts-4">${radios('ageGroup', s.ageGroups)}</div></fieldset>
       <fieldset><legend>性別</legend><div class="opts opts-4">${radios('gender', s.genders)}</div></fieldset>
-      <fieldset><legend>満足度</legend><div class="opts opts-5">${s.satisfaction.map((x) => html`<label class="chip-opt sat"><input type="radio" name="satisfaction" value="${x.code}" required><span><b>${x.code}</b>${x.label}</span></label>`)}</div></fieldset>
+      <p class="scale-hint"><span>1＝${scaleLow.label}</span><span>5＝${scaleHigh.label}</span></p>
+      ${s.questions.map((q) => html`<fieldset class="rate"><legend>${q.label}</legend><div class="opts opts-5">${scale.map((x) => html`<label class="chip-opt sat"><input type="radio" name="rate-${q.key}" value="${x.code}" required aria-label="${q.label} ${x.code} ${x.label}"><span><b>${x.code}</b></span></label>`)}</div></fieldset>`)}
       <label for="comment" class="small-label">${s.commentLabel}（任意・名前は書かないでください）</label>
       <textarea id="comment" name="comment" maxlength="1000" rows="2"></textarea>
       <label class="consent"><input type="checkbox" name="consent" required> ${s.consentText}</label>
@@ -277,7 +290,7 @@ async function loadSurvey() {
     const f = new FormData(e.target);
     try {
       await postJson('/api/visitor/survey', {
-        ageGroup: f.get('ageGroup'), gender: f.get('gender'), satisfaction: Number(f.get('satisfaction')),
+        ageGroup: f.get('ageGroup'), gender: f.get('gender'), ratings: Object.fromEntries(s.questions.map((q) => [q.key, Number(f.get(`rate-${q.key}`))])),
         comment: f.get('comment') ?? '', consent: f.get('consent') === 'on',
       });
       toast('送信しました。ありがとうございました', { kind: 'ok' });

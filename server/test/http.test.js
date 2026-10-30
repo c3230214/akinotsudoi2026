@@ -33,7 +33,7 @@ test('カード発行Cookieは HttpOnly/SameSite=Strict、同じCookieでは再�
   assert.equal((await f.req('GET', '/api/visitor/card/qr.svg', { cookie })).status, 403);
   assert.equal(again.json.qrPayload, null);
   assert.equal(again.json.surveyRequired, true);
-  await f.req('POST', '/api/visitor/survey', { cookie, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 4 } });
+  await f.req('POST', '/api/visitor/survey', { cookie, body: { consent: true, ageGroup: '20代', gender: '女性', ratings: { event: 4, bingo: 4, digital: 4 } } });
   const qr = await f.req('GET', '/api/visitor/card/qr.svg', { cookie });
   assert.equal(qr.status, 200);
   assert.match(qr.res.body, /<svg/);
@@ -94,7 +94,7 @@ test('スタンプQRでマスを埋め、デジタル受付でNをサーバー�
   assert.equal(dup.json.error, 'ALREADY_STAMPED');
   const bad = await f.req('POST', '/api/visitor/stamps', { cookie: visitor, body: { payload: 'MARUGOTO2026:STAMP:unknowntokenxxxxxxxxxxx' } });
   assert.equal(bad.status, 404);
-  await f.req('POST', '/api/visitor/survey', { cookie: visitor, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 4 } });
+  await f.req('POST', '/api/visitor/survey', { cookie: visitor, body: { consent: true, ageGroup: '20代', gender: '女性', ratings: { event: 4, bingo: 4, digital: 4 } } });
   const card = (await f.req('GET', '/api/visitor/card', { cookie: visitor })).json;
   assert.equal(card.lines, 1);
   assert.equal(card.draws, 1);
@@ -254,16 +254,18 @@ test('ログイン失敗が続くと429で止める', async (t) => {
   assert.equal(right.status, 429);
 });
 
-test('会場マップ：初回は同梱の会場レイアウトとステージ予定（資料No.2/No.3）、取込で置き換え、不正データは拒否', async (t) => {
+test('会場マップ：初回は同梱の会場案内図とステージスケジュール（完成版パンフレット）、取込で置き換え、不正データは拒否', async (t) => {
   const f = await makeApp();
   t.after(() => f.close());
   const bundled = (await f.req('GET', '/api/map', { origin: null })).json;
   assert.equal(bundled.venue.name, '大垣城ホール');
   const names = bundled.places.map((p) => p.shortName ?? p.name);
-  for (const n of ['ステージ', 'だいこう列車', 'グラウンドゴルフ', 'おはぎ販売', '景品交換所']) assert.ok(names.includes(n), n);
+  for (const n of ['かがやきステージ', 'だいこう列車', 'グラウンドゴルフ', 'おはぎ販売', '景品交換所']) assert.ok(names.includes(n), n);
   assert.deepEqual(bundled.places.filter((p) => p.kind === 'outdoor').map((p) => p.id).sort(), ['daiko', 'groundgolf', 'ohagi']);
-  assert.equal(bundled.programs.length, 21);
-  assert.equal(bundled.programs.find((g) => g.title.startsWith('18 ')).startsAt, '2026-11-01T14:45+09:00');
+  assert.equal(bundled.programs.length, 20);
+  // The final schedule gives part times only: 第2部 is 12:30-15:00 for every performer.
+  const os = bundled.programs.find((g) => g.organizer === 'OSアンサンブル風');
+  assert.deepEqual([os.startsAt, os.endsAt], ['2026-11-01T12:30+09:00', '2026-11-01T15:00+09:00']);
   const admin = await f.staff('admin');
   const data = {
     venue: { name: '大垣城ホール', width: 40, depth: 28 },
@@ -378,7 +380,7 @@ test('⑤はタップで達成（QRなし）、他のマスはタップだけで
   assert.equal((await f.req('POST', '/api/visitor/tap', { cookie: null, body: { cellIndex: 4 } })).status, 401);
 });
 
-test('アンケート：年代・性別・満足度をコードで保存し、集計とCSVに出す。1カード1回', async (t) => {
+test('アンケート：年代・性別と3項目の満足度（1〜5）をコードで保存し、集計とCSVに出す。1カード1回', async (t) => {
   const f = await makeApp();
   t.after(() => f.close());
   const answer = async (body) => {
@@ -387,24 +389,27 @@ test('アンケート：年代・性別・満足度をコードで保存し、�
   };
   const cfg = (await f.req('GET', '/api/visitor/survey', { origin: null })).json;
   assert.equal(cfg.enabled, true);
-  assert.deepEqual(cfg.satisfaction.map((x) => x.code), [5, 4, 3, 2, 1]);
-  assert.equal((await answer({ ageGroup: '30代', gender: '女性', satisfaction: 5 })).status, 200);
-  assert.equal((await answer({ ageGroup: '30代', gender: '男性', satisfaction: 4 })).status, 200);
-  assert.equal((await answer({ ageGroup: '10代', gender: '女性', satisfaction: 3 })).status, 200);
-  assert.equal((await answer({ ageGroup: '30代', gender: '女性', satisfaction: 9 })).status, 422);
-  assert.equal((await answer({ ageGroup: '130代', gender: '女性', satisfaction: 3 })).status, 422);
+  assert.deepEqual(cfg.questions.map((q) => q.label), ['秋のつどいの満足度', 'まるごと体験ビンゴの満足度', 'デジタルビンゴカードの満足度']);
+  assert.equal((await answer({ ageGroup: '30代', gender: '女性', ratings: { event: 5, bingo: 4, digital: 3 } })).status, 200);
+  assert.equal((await answer({ ageGroup: '30代', gender: '男性', ratings: { event: 4, bingo: 4, digital: 5 } })).status, 200);
+  assert.equal((await answer({ ageGroup: '10代', gender: '女性', ratings: { event: 3, bingo: 1, digital: 4 } })).status, 200);
+  assert.equal((await answer({ ageGroup: '30代', gender: '女性', ratings: { event: 9, bingo: 4, digital: 4 } })).status, 422);
+  assert.equal((await answer({ ageGroup: '30代', gender: '女性', ratings: { event: 4, bingo: 4 } })).status, 422);
+  assert.equal((await answer({ ageGroup: '130代', gender: '女性', ratings: { event: 3, bingo: 3, digital: 3 } })).status, 422);
   const admin = await f.staff('admin');
   const sum = (await f.req('GET', '/api/admin/surveys/summary', { cookie: admin })).json;
   assert.equal(sum.total, 3);
-  assert.equal(sum.satisfaction.mean, 4);
-  assert.equal(sum.byAge.find((r) => r.label === '30代').mean, 4.5);
+  assert.equal(sum.questions.find((q) => q.key === 'event').mean, 4);
+  assert.equal(sum.questions.find((q) => q.key === 'bingo').mean, 3);
+  assert.equal(sum.questions.find((q) => q.key === 'digital').distribution[5], 1);
+  assert.equal(sum.byAge.find((r) => r.label === '30代').means.event, 4.5);
   assert.equal(sum.byGender.find((r) => r.label === '女性').count, 2);
   const csv = (await f.req('GET', '/api/admin/export/surveys.csv', { cookie: admin })).res.body;
-  assert.match(csv, /"ageCode"/);
-  assert.match(csv, /"4","30代","2","女性","5","とても満足"/);
+  assert.match(csv, /"eventSatisfaction","bingoSatisfaction","digitalCardSatisfaction"/);
+  assert.match(csv, /"4","30代","2","女性","5","4","3"/);
   const v = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
-  await f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 3 } });
-  assert.equal((await f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ageGroup: '20代', gender: '女性', satisfaction: 3 } })).json.error, 'ALREADY_ANSWERED');
+  await f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ageGroup: '20代', gender: '女性', ratings: { event: 3, bingo: 3, digital: 3 } } });
+  assert.equal((await f.req('POST', '/api/visitor/survey', { cookie: v, body: { consent: true, ageGroup: '20代', gender: '女性', ratings: { event: 3, bingo: 3, digital: 3 } } })).json.error, 'ALREADY_ANSWERED');
 });
 
 test('カメラ画面：紙カードの判定とデジタルQRを振り分けた台の確認待ちに置き、玉の色は候補として出すだけ', async (t) => {
@@ -413,6 +418,10 @@ test('カメラ画面：紙カードの判定とデジタルQRを振り分けた
   const admin = await f.staff('admin');
   await f.setupInventory(admin);
   const pc = await f.staff('printer');
+  // Off by default: each machine's tablet turns camera recognition on.
+  assert.equal((await f.req('POST', '/api/camera/hint', { cookie: pc, body: { machineId: 'garagara-1', color: 'red' } })).json.error, 'CAMERA_ASSIST_OFF');
+  for (const machineId of ['garagara-1', 'garagara-2']) assert.equal((await f.command(admin, { type: 'setCameraAssist', machineId, enabled: true })).status, 200);
+  assert.equal((await f.req('GET', '/api/camera/state', { cookie: pc })).json.machines[0].cameraAssist, true);
   const paper = await f.req('POST', '/api/camera/card-read', { cookie: pc, body: { machineId: 'garagara-2', kind: 'paper', cells: [true, true, true, false, true, null, false, false, true], cornerPresent: true } });
   assert.equal(paper.status, 200, JSON.stringify(paper.json));
   assert.equal(paper.json.preview.lines, 2);
@@ -440,4 +449,47 @@ test('カメラ画面：紙カードの判定とデジタルQRを振り分けた
   assert.equal(f.svc.draw.getState().sessions[acc.json.result.sessionId].balls.length, 0, 'a hint never records a ball');
   const visitorCookie = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
   assert.equal((await f.req('POST', '/api/camera/hint', { cookie: visitorCookie, body: { machineId: 'garagara-1', color: 'red' } })).status, 401);
+});
+
+test('タブレットの回数選択：紙カードは1〜3回を選んで開始し、色を入力して確定すると各回の等級が引換券に載る', async (t) => {
+  const f = await makeApp();
+  t.after(() => f.close());
+  const admin = await f.staff('admin');
+  await f.setupInventory(admin);
+  const op1 = await f.staff('operator');
+  await f.req('POST', '/api/staff/machine', { cookie: op1, body: { machineId: 'garagara-1' } });
+  const rev = () => f.svc.draw.getState().machines['garagara-1'].revision;
+  const accept = (body) => f.req('POST', '/api/staff/cards/accept', { cookie: op1, body: { kind: 'paper', machineId: 'garagara-1', expectedMachineRevision: rev(), operationId: f.op(), cornerPresent: true, ...body } });
+  assert.equal((await accept({ declaredDraws: 4 })).status, 422);
+  assert.equal((await accept({ declaredDraws: 2, marks: Array(9).fill(true) })).status, 422);
+  // The other machine's operator cannot start this machine.
+  const op2 = await f.staff('operator');
+  await f.req('POST', '/api/staff/machine', { cookie: op2, body: { machineId: 'garagara-2' } });
+  assert.equal((await f.req('POST', '/api/staff/cards/accept', { cookie: op2, body: { kind: 'paper', declaredDraws: 1, machineId: 'garagara-1', expectedMachineRevision: rev(), operationId: f.op(), cornerPresent: true } })).status, 403);
+  const out = await accept({ declaredDraws: 2 });
+  assert.equal(out.status, 200, JSON.stringify(out.json));
+  const id = out.json.result.sessionId;
+  const session = f.svc.draw.getState().sessions[id];
+  assert.equal(session.n, 2);
+  assert.equal(session.lines, null);
+  assert.equal(session.intake.source, 'staff-count');
+  for (const color of ['white', 'green']) assert.equal((await f.command(op1, { type: 'manualBall', machineId: 'garagara-1', sessionId: id, color })).status, 200);
+  const fin = await f.command(op1, { type: 'finalizeResult', machineId: 'garagara-1', sessionId: id, trayEmptied: true });
+  assert.equal(fin.status, 200, JSON.stringify(fin.json));
+  const job = (await f.req('GET', '/api/staff/view', { cookie: admin })).json.printQueue.find((j) => j.sessionId === id);
+  assert.equal(job.draws, 2);
+  assert.deepEqual(job.prizes.map((p) => p.grade), [4, 2]);
+  // Camera assist is switched per machine by its own operator only.
+  assert.equal((await f.command(op1, { type: 'setCameraAssist', machineId: 'garagara-1', enabled: true })).status, 200);
+  assert.equal((await f.command(op1, { type: 'setCameraAssist', machineId: 'garagara-2', enabled: true })).status, 403);
+});
+
+test('埋め込み：WindowsPC画面の枠に入るカメラ画面と発券画面だけ同一オリジンからの埋め込みを許可', async (t) => {
+  const f = await makeApp();
+  t.after(() => f.close());
+  for (const [url, expected] of [['/camera/', 'SAMEORIGIN'], ['/print/', 'SAMEORIGIN'], ['/visitor/', 'DENY'], ['/garagara1/', 'DENY'], ['/staff/', 'DENY'], ['/camera/../visitor/', 'DENY']]) {
+    const r = await f.req('GET', url, { origin: null });
+    assert.equal(r.res.headers['x-frame-options'], expected, url);
+  }
+  assert.match((await f.req('GET', '/camera/', { origin: null })).res.headers['content-security-policy'], /frame-ancestors 'self'/);
 });

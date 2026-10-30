@@ -7,7 +7,7 @@ import {
   finalizeResult, markManualVoucher, recordPrintResult, redeemPrize, requestReprint,
 } from './finish.js';
 import {
-  addRefillPlan, adjustInventory, refillPlanned, returnBalls, setInputMode, setInventory,
+  addRefillPlan, adjustInventory, refillPlanned, returnBalls, setCameraAssist, setInputMode, setInventory,
 } from './inventory.js';
 import { clearEmergency, emergencyStop, resumeDrawing, setIntakeClosed } from './safety.js';
 import { updateSettings } from './settings.js';
@@ -32,6 +32,7 @@ export const HANDLERS = Object.freeze({
   addRefillPlan,
   refillPlanned,
   setInputMode,
+  setCameraAssist,
   emergencyStop,
   clearEmergency,
   resumeDrawing,

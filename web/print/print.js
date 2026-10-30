@@ -122,7 +122,8 @@ function receipt(j) {
     <p class="r-title">${j.eventName}</p>
     <p class="r-label">景品引換券</p>
     <p class="r-no">${j.sessionId}</p>
-    <ul class="r-prizes">${j.prizes.map((p) => html`<li>${p.grade}等（${COLOR_LABELS[p.color]}）${p.prize}</li>`)}</ul>
+    <p class="r-draws">ガラガラ ${j.draws ?? j.prizes.length}回</p>
+    <ul class="r-prizes">${j.prizes.map((p, i) => html`<li><span class="r-turn">${i + 1}回目</span> <b>${p.grade}等</b>（${COLOR_LABELS[p.color]}）${p.prize}</li>`)}</ul>
     <img class="r-qr" alt="" src="/api/staff/vouchers/${j.sessionId}/qr.svg">
     <p class="r-meta">${j.machineName}　${fmtDateTime(j.finalizedAt)}${j.kind === 'reprint' ? '　再発行' : ''}</p>
     <p class="r-note">景品交換所でこの券をお渡しください。景品交換は15:00まで。</p>`;

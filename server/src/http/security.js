@@ -25,15 +25,20 @@ export function verifyOrigin(config) {
   };
 }
 
+// The Windows PC screen (/pc/) shows the camera and print screens side by
+// side in same-origin frames; every other page refuses to be framed.
+const FRAMEABLE = /^\/(camera|print)\/(?:index\.html)?(?:\?|$)/;
+
 export function securityHeaders(reply) {
+  const frameable = FRAMEABLE.test(reply.request?.url ?? '');
   reply.header('X-Content-Type-Options', 'nosniff');
   reply.header('Referrer-Policy', 'same-origin');
-  reply.header('X-Frame-Options', 'DENY');
+  reply.header('X-Frame-Options', frameable ? 'SAMEORIGIN' : 'DENY');
   reply.header('Cross-Origin-Opener-Policy', 'same-origin');
   reply.header('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
   reply.header('Content-Security-Policy', [
     "default-src 'self'", "script-src 'self'", "style-src 'self'", "img-src 'self' data: blob:",
-    "connect-src 'self'", "media-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "frame-ancestors 'none'", "form-action 'self'",
+    "connect-src 'self'", "media-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "frame-src 'self'", frameable ? "frame-ancestors 'self'" : "frame-ancestors 'none'", "form-action 'self'",
   ].join('; '));
 }
 

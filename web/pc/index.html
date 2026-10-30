@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WindowsPC（カメラ・発券）｜まるごと体験ビンゴ</title>
+  <link rel="stylesheet" href="/shared/base.css">
+  <link rel="stylesheet" href="/pc/pc.css">
+  <script type="module" src="/pc/pc.js"></script>
+</head>
+<body>
+  <header class="pcbar">
+    <strong>WindowsPC</strong><span class="muted">カメラ3台で読取 ／ MP-B20で引換券を発券</span>
+    <nav class="pclinks">
+      <a class="btn btn-plain btn-small" href="/staff/#redeem" target="mb-staff">景品引換・管理（スタッフ画面）</a>
+      <a class="btn btn-plain btn-small" href="/admin/" target="mb-admin">管理パネル</a>
+    </nav>
+  </header>
+  <main class="pcmain">
+    <iframe id="f-camera" title="カメラ画面" src="/camera/" allow="camera"></iframe>
+    <iframe id="f-print" title="発券画面" src="/print/"></iframe>
+  </main>
+</body>
+</html>

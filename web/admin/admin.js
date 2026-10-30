@@ -1,5 +1,6 @@
 import { api, getJson, operationId } from '../shared/api.js';
 import { $, COLOR_LABELS, COLORS, fmtDateTime, fmtTime, html, render, toast } from '../shared/html.js';
+import { surveyDistributionTable, surveyMeansTable } from '../shared/surveyTable.js';
 
 // Basic-auth administrator panel: quantities, logs and the switch that
 // closes new intake when prizes run out. The browser sends the Basic
@@ -78,7 +79,7 @@ function draw() {
         <div class="stat"><b>${cards.digital?.used ?? 0}</b>デジタル受付済み</div>
         <div class="stat"><b>${cards.paper?.total ?? 0}</b>紙カード受付</div>
         <div class="stat"><b>${d.surveys.total}</b>アンケート</div>
-        <div class="stat"><b>${d.surveys.satisfaction.mean ?? '－'}</b>満足度平均（5段階）</div>
+        ${d.surveys.questions.map((q) => html`<div class="stat"><b>${q.mean ?? '－'}</b>${q.label}（平均）</div>`)}
       </div>
     </section>
 
@@ -102,10 +103,10 @@ function draw() {
     </table></div>
     <p class="row"><a class="btn btn-plain btn-small" href="/api/panel/export/sessions.csv">抽選結果CSV</a><a class="btn btn-plain btn-small" href="/api/panel/export/audit.csv">操作ログCSV</a></p></section>
 
-    <section class="panel"><h2>アンケート（年代・性別ごとの満足度）</h2>
-      <div class="table-wrap"><table><thead><tr><th>区分</th><th class="num">回答</th><th class="num">平均</th>${d.surveys.satisfaction.labels.map((x) => html`<th class="num">${x.code}</th>`)}</tr></thead>
-      <tbody>${[{ label: '全体', count: d.surveys.total, mean: d.surveys.satisfaction.mean, distribution: d.surveys.satisfaction.distribution }, ...d.surveys.byAge, ...d.surveys.byGender].map((r) => html`<tr><td>${r.label}</td><td class="num">${r.count}</td><td class="num">${r.mean ?? '－'}</td>${d.surveys.satisfaction.labels.map((x) => html`<td class="num">${r.distribution[x.code]}</td>`)}</tr>`)}</tbody></table></div>
-      <p class="muted small">満足度 5＝とても満足、4＝満足、3＝ふつう、2＝やや不満、1＝不満。</p>
+    <section class="panel"><h2>アンケート（3項目の満足度、年代・性別ごと）</h2>
+      ${surveyDistributionTable(d.surveys)}
+      ${surveyMeansTable(d.surveys)}
+      <p class="muted small">各項目 5＝とても満足、4＝満足、3＝ふつう、2＝やや不満、1＝不満。</p>
       <p class="row"><a class="btn btn-plain btn-small" href="/api/panel/export/surveys.csv">アンケートCSV（コード付き）</a></p>
     </section>
 

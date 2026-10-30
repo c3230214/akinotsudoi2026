@@ -54,10 +54,17 @@ N="node --env-file=$E --disable-warning=ExperimentalWarning"
 # 管理者を作る（パスコードは画面に表示されない入力で聞かれる）
 sudo -u marugoto-bingo $N scripts/createStaff.js --login admin --name 管理者 --role admin
 
-# 印刷済みの9個のスタンプQRを登録する（ZIPに同梱した原本を使う）
+# 印刷済みの8個のスタンプQR（①〜④、⑥〜⑨。⑤はQRなしでタップ達成）を登録する（ZIPに同梱した原本を使う）
 sudo -u marugoto-bingo $N scripts/generateStampQr.js --import ../stamp-qr/stamp-tokens.json --out /var/lib/marugoto-bingo/stamp-qr
 
-# 会場PCの検出プログラム用トークン（台ごと、表示は1回だけ）
+# 台担当（iPad＝ガラガラ1、Pixel Tablet＝ガラガラ2）と、WindowsPCの発券・カメラ用アカウント
+sudo -u marugoto-bingo $N scripts/createStaff.js --login op1 --name ガラガラ1担当 --role operator
+sudo -u marugoto-bingo $N scripts/createStaff.js --login op2 --name ガラガラ2担当 --role operator
+sudo -u marugoto-bingo $N scripts/createStaff.js --login pc --name WindowsPC --role printer
+sudo -u marugoto-bingo $N scripts/createStaff.js --login prize --name 景品交換所 --role prize
+
+# （使う場合のみ）別プログラムで検出する会場PC用トークン。ブラウザのカメラ画面には不要
+
 sudo -u marugoto-bingo $N scripts/issueDeviceToken.js --machine garagara-1
 sudo -u marugoto-bingo $N scripts/issueDeviceToken.js --machine garagara-2
 ```
@@ -99,4 +106,6 @@ sudo -u marugoto-bingo node --env-file=/etc/marugoto-bingo/marugoto-bingo.env --
 
 ## 9. 公開前に確認すること
 
-`docs/CHECKLIST_BEFORE_PRODUCTION.md` を参照してください。HTTPSで公開URLを開き、来場者画面のカメラ起動（HTTPSが必須）、スタッフのログイン、発券PCの自動印刷（Chromeを `--kiosk-printing` 付きで起動）、案内iPadの登録を実機で確かめます。
+`docs/CHECKLIST_BEFORE_PRODUCTION.md` を参照してください。HTTPSで公開URLを開き、来場者画面のカメラ起動（HTTPSが必須）、スタッフのログイン、WindowsPCの `/pc/` でカメラ3台とMP-B20の自動印刷（Chromeを `--kiosk-printing` 付きで起動）、iPadの `/garagara1/` とPixel Tabletの `/garagara2/` での受付から発券までを実機で確かめます。
+
+会場マップは、DBにマップがないときだけ起動時に `server/config/map-2026.json` を取り込みます。以前のZIPで案の配置を取り込み済みのサーバーでは、`scripts/importMap.js --file config/map-2026.json` で完成版に置き換えてください。

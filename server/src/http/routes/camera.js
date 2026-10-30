@@ -16,6 +16,11 @@ export function cameraRoutes(app, { auth, draw, devices }) {
       throw new DomainError('MACHINE_NOT_SELECTED', '担当台として選択している台だけ送信できます', { status: 403 });
     }
     if (!limiter.hit(a.sessionHash).allowed) throw new DomainError('RATE_LIMITED', '送信が多すぎます', { status: 429 });
+    // Each machine's tablet decides whether camera recognition is used there.
+    const m = draw.getState().machines[machineId];
+    if (m && m.cameraAssist !== true) {
+      throw new DomainError('CAMERA_ASSIST_OFF', `${m.name}のタブレットでカメラ自動認識がオフになっています`, { status: 409 });
+    }
   };
 
   app.get('/api/camera/state', { preHandler: pre }, async (_request, reply) => {
@@ -27,6 +32,7 @@ export function cameraRoutes(app, { auth, draw, devices }) {
       machines: Object.values(s.machines).map((m) => ({
         id: m.id, name: m.name, phase: m.phase, stopped: Boolean(m.emergency || m.resumeRequired),
         activeSessionId: m.activeSessionId, pendingRead: Boolean(status[m.id]?.pendingRead),
+        cameraAssist: m.cameraAssist === true,
       })),
     };
   });

@@ -127,8 +127,13 @@ export function createCardService({ db, clock, draw, claimSecret, bus }) {
    * the same physical card presented twice. The corner procedure is the only
    * guard and it is an operational rule, not a software guarantee.
    */
-  function acceptPaper({ marks, readId = null, cornerPresent, cornerReason, correctionReason, machineId, expectedMachineRevision, actor, operationId, requestBody }) {
-    validateMarks(marks);
+  function acceptPaper({ marks = null, declaredDraws = null, readId = null, cornerPresent, cornerReason, correctionReason, machineId, expectedMachineRevision, actor, operationId, requestBody }) {
+    if (declaredDraws !== null) {
+      // Started from the tablet's 回数選択: staff counted the lines on the card.
+      if (marks !== null || readId !== null) invalid('回数選択の受付では、マスの指定や読取結果は使いません');
+    } else {
+      validateMarks(marks);
+    }
     let originalMarks = null;
     let read = null;
     if (readId !== null) {
@@ -138,7 +143,8 @@ export function createCardService({ db, clock, draw, claimSecret, bus }) {
     }
     const changed = originalMarks ? originalMarks.some((v, i) => v !== marks[i]) : false;
     const intake = {
-      source: read ? 'c1' : 'staff-manual',
+      source: read ? 'c1' : declaredDraws !== null ? 'staff-count' : 'staff-manual',
+      declaredDraws,
       readId,
       originalMarks,
       correctedMarks: changed ? marks : null,
@@ -156,7 +162,7 @@ export function createCardService({ db, clock, draw, claimSecret, bus }) {
       operationId,
       requestBody,
       actor,
-      action: { type: 'startSession', machineId, expectedMachineRevision, card: { id: cardId, kind: 'paper' }, marks, intake },
+      action: { type: 'startSession', machineId, expectedMachineRevision, card: { id: cardId, kind: 'paper' }, marks, declaredDraws, intake },
       after: (out, at) => {
         insertCard(db, { id: cardId, kind: 'paper', createdAt: at });
         markCardUsed(db, { cardId, sessionId: out.result.sessionId, machineId, at, intake });

@@ -1,0 +1,9 @@
+/* Windows PC: camera screen and print screen side by side (both keep running). */
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; margin: 0; background: #f4efe9; }
+.pcbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 6px 12px; background: #fff; border-bottom: 3px solid var(--accent); }
+.pcbar strong { color: var(--accent-dark); font-size: 1.15em; }
+.pclinks { margin-left: auto; display: flex; gap: 8px; }
+.pcmain { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr); gap: 6px; padding: 6px; }
+.pcmain iframe { width: 100%; height: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+@media (max-width: 900px) { .pcmain { grid-template-columns: 1fr; grid-template-rows: 60vh 60vh; } }

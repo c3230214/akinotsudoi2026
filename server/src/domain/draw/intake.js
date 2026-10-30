@@ -36,10 +36,24 @@ export function startSession(s, a, ctx) {
   }
   requireIntakeAllowed(s, machine, ctx);
   if (!a.card || typeof a.card.id !== 'string' || !['paper', 'digital'].includes(a.card.kind)) invalid('card is required');
-  validateMarks(a.marks);
-  const lines = completeLines(a.marks);
-  const n = entitledDraws(lines);
-  if (n === 0) fail('NO_LINES', 'ビンゴのラインが成立していないため抽選できません', { status: 422 });
+  let marks = null;
+  let lines = null;
+  let n;
+  if (a.declaredDraws !== undefined && a.declaredDraws !== null) {
+    // 2026-10-30 request: staff may start a paper card by choosing the number
+    // of turns (1-3) after counting the lines on the card themselves. The
+    // server cannot check that count; it is recorded as declared by staff.
+    if (a.card.kind !== 'paper') invalid('回数を選んで始められるのは紙カードだけです');
+    if (a.marks !== undefined && a.marks !== null) invalid('marks and declaredDraws cannot be combined');
+    if (![1, 2, 3].includes(a.declaredDraws)) invalid('回数は1〜3回です');
+    n = a.declaredDraws;
+  } else {
+    validateMarks(a.marks);
+    marks = [...a.marks];
+    lines = completeLines(marks);
+    n = entitledDraws(lines);
+    if (n === 0) fail('NO_LINES', 'ビンゴのラインが成立していないため抽選できません', { status: 422 });
+  }
 
   s.sessionCounter += 1;
   const id = `BM-${String(s.sessionCounter).padStart(4, '0')}`;
@@ -47,7 +61,7 @@ export function startSession(s, a, ctx) {
     id,
     machineId: machine.id,
     card: { id: a.card.id, kind: a.card.kind },
-    marks: [...a.marks],
+    marks,
     lines,
     n,
     intake: a.intake ?? null,
@@ -67,7 +81,7 @@ export function startSession(s, a, ctx) {
   s.locked = true;
   return {
     touched: [machine.id],
-    message: `${id} 受付：${lines}ライン、抽選${n}回`,
+    message: lines === null ? `${id} 受付：紙カード（回数選択）、抽選${n}回` : `${id} 受付：${lines}ライン、抽選${n}回`,
     result: { sessionId: id, lines, n, generation: id },
   };
 }

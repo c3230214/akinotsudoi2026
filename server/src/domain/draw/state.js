@@ -89,6 +89,10 @@ function newMachine(m) {
     activeSessionId: null,
     generation: null,
     inputMode: 'manual', // manual | auto  (TODO(DECISION-C02))
+    // Camera station assistance for this machine (card reads and ball colour
+    // hints), switched from the machine's tablet. Off by default: the manual
+    // flow works without it. Never counts balls by itself.
+    cameraAssist: false,
     emergency: null, // { at, reason, by } while stopped
     resumeRequired: false,
     contents: zeroColors(),

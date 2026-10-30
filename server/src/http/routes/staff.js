@@ -20,6 +20,7 @@ export const COMMAND_ROLES = Object.freeze({
   returnBalls: OPS,
   refillPlanned: OPS,
   setInputMode: OPS,
+  setCameraAssist: OPS,
   emergencyStop: OPS,
   clearEmergency: OPS,
   resumeDrawing: OPS,
@@ -110,7 +111,7 @@ export function staffRoutes(app, { auth, draw, cards, devices, surveys, db }) {
         properties: {
           kind: { enum: ['paper', 'digital'] }, machineId: { type: 'string', maxLength: 32 }, expectedMachineRevision: { type: 'integer' },
           operationId: { type: 'string', maxLength: 80 }, payload: { type: 'string', maxLength: 300 }, readId: { type: ['integer', 'null'] },
-          marks: { type: 'array', minItems: 9, maxItems: 9, items: { type: 'boolean' } },
+          marks: { type: 'array', minItems: 9, maxItems: 9, items: { type: 'boolean' } }, declaredDraws: { type: 'integer', minimum: 1, maximum: 3 },
           cornerPresent: { type: 'boolean' }, cornerReason: { type: 'string', maxLength: 500 }, correctionReason: { type: 'string', maxLength: 500 },
         },
       },
@@ -124,8 +125,8 @@ export function staffRoutes(app, { auth, draw, cards, devices, surveys, db }) {
     if (b.kind === 'digital') {
       return cards.acceptDigital({ payload: b.payload, readId: b.readId ?? null, machineId: b.machineId, expectedMachineRevision: b.expectedMachineRevision, actor, operationId: b.operationId, requestBody });
     }
-    if (!b.marks) throw new DomainError('VALIDATION_FAILED', '9マスの達成状態を指定してください', { status: 422 });
-    return cards.acceptPaper({ ...b, readId: b.readId ?? null, actor, requestBody });
+    if (!b.marks && !b.declaredDraws) throw new DomainError('VALIDATION_FAILED', '9マスの達成状態か抽選回数を指定してください', { status: 422 });
+    return cards.acceptPaper({ ...b, marks: b.marks ?? null, declaredDraws: b.declaredDraws ?? null, readId: b.readId ?? null, actor, requestBody });
   });
 
   app.post('/api/staff/cards/lookup', {

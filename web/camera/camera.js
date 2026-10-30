@@ -51,7 +51,9 @@ async function boot() {
   await listDevices();
   pollState();
   setInterval(pollState, 3000);
-  requestAnimationFrame(loop);
+  // A timer rather than requestAnimationFrame, so scanning continues when
+  // another window (the print screen) is in front.
+  setInterval(loop, 33);
 }
 
 function login() {
@@ -87,7 +89,7 @@ function renderShell() {
     <div class="layout">
       <section class="panel">
         <h2>カード読取</h2>
-        <div class="cam" id="cam-card"><video playsinline muted></video><canvas class="overlay"></canvas><span class="badge">カード</span></div>
+        <div class="cam" id="cam-card"><video playsinline muted></video><canvas class="overlay"></canvas><span class="badge">カード</span><span class="cam-state" hidden></span></div>
         <div class="tools">
           <button class="btn" id="scan-paper">紙カードを読み取る</button>
           <button class="btn btn-plain btn-small" id="pick">カードの四隅を指定</button>
@@ -113,7 +115,7 @@ function renderShell() {
       <p class="muted small">玉の色の認識は精度を検証していないため、記録はしません。認識した色は担当台のタブレットに「候補」として表示され、担当者が確認して記録します。</p>
       <div class="balls">${SLOTS.slice(1).map((s) => html`
         <div>
-          <div class="cam" id="cam-${s.id}"><video playsinline muted></video><canvas class="overlay"></canvas><span class="badge">${s.label}</span></div>
+          <div class="cam" id="cam-${s.id}"><video playsinline muted></video><canvas class="overlay"></canvas><span class="badge">${s.label}</span><span class="cam-state" hidden></span></div>
           <p class="ballinfo" id="info-${s.id}" role="status"></p>
           <div class="tools">
             <button class="btn btn-plain btn-small" data-bg="${s.id}">背景を登録（玉なし）</button>
@@ -137,7 +139,7 @@ function renderShell() {
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, textarea, select')) return;
     const m = st.machines[Number(e.key) - 1];
-    if (m && st.detected) send(m.id);
+    if (m && m.cameraAssist && st.detected) send(m.id);
   });
   updateCalibState();
 }
@@ -170,8 +172,18 @@ async function startSlot(slot) {
     st.streams[slot] = stream;
     video.srcObject = stream;
     await video.play();
+    // A USB camera that drops out (cable, hub power, bandwidth) ends its track:
+    // try to restart it, and again whenever Windows reports a device change.
+    stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+      if (st.streams[slot] !== stream) return;
+      delete st.streams[slot];
+      setCamState(slot, '映像が途切れました。再接続しています…', true);
+      setTimeout(() => startSlot(slot), 2000);
+    });
+    setCamState(slot, '');
   } catch (error) {
     const label = SLOTS.find((x) => x.id === slot)?.label ?? slot;
+    setCamState(slot, `起動できません（${error.name}）`, true);
     if (error.name === 'OverconstrainedError' || error.name === 'NotFoundError') {
       // The saved camera is no longer attached (or its id changed): ask to choose again.
       store.set(`dev-${slot}`, '');
@@ -182,6 +194,19 @@ async function startSlot(slot) {
     }
   }
 }
+
+function setCamState(slot, text, bad = false) {
+  const el = $(`#cam-${slot} .cam-state`);
+  if (!el) return;
+  el.textContent = text;
+  el.hidden = !text;
+  el.classList.toggle('bad', bad);
+}
+
+// Re-open cameras that are selected but not running when a camera is plugged back in.
+navigator.mediaDevices?.addEventListener?.('devicechange', () => {
+  for (const s of SLOTS) if (store.get(`dev-${s.id}`, '') && !st.streams[s.id]) startSlot(s.id);
+});
 
 // ---------- card: calibration ----------
 function updateCalibState() {
@@ -273,7 +298,7 @@ function scanQrFrame() {
 
 // ---------- send ----------
 function suggestion() {
-  const idle = st.machines.filter((m) => !m.stopped && !m.activeSessionId && !m.pendingRead);
+  const idle = st.machines.filter((m) => m.cameraAssist && !m.stopped && !m.activeSessionId && !m.pendingRead);
   return idle[0]?.id ?? null;
 }
 
@@ -297,7 +322,7 @@ function renderDetected() {
 function renderSend() {
   if (!$('#send')) return;
   const sug = suggestion();
-  render($('#send'), html`${st.machines.map((m, i) => html`<button class="btn ${m.id === sug ? 'suggest' : 'btn-secondary'}" data-send="${m.id}" ${st.detected ? '' : 'disabled'}>${i + 1}：${m.name}へ送る${m.activeSessionId ? '（抽選中）' : m.pendingRead ? '（確認待ちあり）' : ''}</button>`)}`);
+  render($('#send'), html`${st.machines.map((m, i) => html`<button class="btn ${m.id === sug ? 'suggest' : 'btn-secondary'}" data-send="${m.id}" ${st.detected && m.cameraAssist ? '' : 'disabled'}>${i + 1}：${m.name}へ送る${!m.cameraAssist ? '（タブレットで自動認識オフ）' : m.activeSessionId ? '（抽選中）' : m.pendingRead ? '（確認待ちあり）' : ''}</button>`)}`);
   for (const b of $$('[data-send]')) b.addEventListener('click', () => send(b.dataset.send));
 }
 
@@ -353,7 +378,8 @@ function checkBall(machineId) {
   // One hint per ball: when it has been seen for 3 checks, then wait until the tray is empty again.
   if (!b.present && b.presentTicks >= 3) {
     b.present = true;
-    if (store.get(`hint-${machineId}`, true)) {
+    // Hints go only to a machine whose tablet has camera recognition on.
+    if (store.get(`hint-${machineId}`, true) && st.machines.find((m) => m.id === machineId)?.cameraAssist) {
       postJson('/api/camera/hint', { machineId, color: r.color, confidence: r.confidence }).catch((error) => { info.textContent += `（送信失敗：${error.message}）`; });
     }
   }
@@ -402,7 +428,6 @@ function loop() {
   if (tick % 10 === 0) scanQrFrame();
   if (tick % 9 === 0) { checkBall('garagara-1'); checkBall('garagara-2'); }
   if (tick % 3 === 0) SLOTS.forEach((s) => drawOverlay(s.id));
-  requestAnimationFrame(loop);
 }
 
 boot().then(() => renderDetected());

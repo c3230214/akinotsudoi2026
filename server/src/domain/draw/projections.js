@@ -73,7 +73,7 @@ export function printQueue(s) {
     if (!session.voucher) continue;
     for (const job of session.voucher.jobs) {
       if (job.status === 'queued' || job.status === 'printing' || job.status === 'dispatched') {
-        jobs.push({ ...job, sessionId: id, machineId: session.machineId, machineName: s.machines[session.machineId]?.name, prizes: session.voucher.prizes, finalizedAt: session.finalizedAt, eventName: s.settings.eventName });
+        jobs.push({ ...job, sessionId: id, machineId: session.machineId, machineName: s.machines[session.machineId]?.name, prizes: session.voucher.prizes, draws: session.n, finalizedAt: session.finalizedAt, eventName: s.settings.eventName });
       }
     }
   }
@@ -96,7 +96,7 @@ export function toStaffView(s, { now, devices = {} } = {}) {
   const machines = Object.values(s.machines).map((m) => {
     const inMachinesOverStock = COLORS.filter((c) => Object.values(s.machines).reduce((sum, x) => sum + x.contents[c], 0) > availablePrizes(s, c));
     return {
-      id: m.id, name: m.name, revision: m.revision, phase: m.phase, inputMode: m.inputMode,
+      id: m.id, name: m.name, revision: m.revision, phase: m.phase, inputMode: m.inputMode, cameraAssist: m.cameraAssist === true,
       emergency: m.emergency, resumeRequired: m.resumeRequired,
       contents: m.contents, returnPending: m.returnPending,
       activeSession: m.activeSessionId ? sessionView(s, s.sessions[m.activeSessionId]) : null,

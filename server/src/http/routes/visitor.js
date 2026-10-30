@@ -74,11 +74,11 @@ export function visitorRoutes(app, { cards, maps, surveys, notices, config }) {
     const card = currentCard(request);
     const cfg = surveys.getConfig();
     const answered = card ? surveys.find(card.id) : null;
-    return { enabled: cfg.enabled, ageGroups: cfg.ageGroups, genders: cfg.genders, satisfaction: cfg.satisfaction, consentText: cfg.consentText, commentLabel: cfg.commentLabel, giftEnabled: cfg.giftEnabled, answered: Boolean(answered), answeredAt: answered?.answeredAt ?? null, giftAt: answered?.giftAt ?? null, hasCard: Boolean(card) };
+    return { enabled: cfg.enabled, ageGroups: cfg.ageGroups, genders: cfg.genders, satisfaction: cfg.satisfaction, questions: cfg.questions, consentText: cfg.consentText, commentLabel: cfg.commentLabel, giftEnabled: cfg.giftEnabled, answered: Boolean(answered), answeredAt: answered?.answeredAt ?? null, giftAt: answered?.giftAt ?? null, hasCard: Boolean(card) };
   });
 
   app.post('/api/visitor/survey', {
-    schema: { body: { type: 'object', properties: { ageGroup: { type: 'string', maxLength: 40 }, gender: { type: 'string', maxLength: 40 }, satisfaction: { type: 'integer', minimum: 1, maximum: 5 }, comment: { type: 'string', maxLength: 1000 }, consent: { type: 'boolean' } } } },
+    schema: { body: { type: 'object', properties: { ageGroup: { type: 'string', maxLength: 40 }, gender: { type: 'string', maxLength: 40 }, ratings: { type: 'object', additionalProperties: false, properties: { event: { type: 'integer', minimum: 1, maximum: 5 }, bingo: { type: 'integer', minimum: 1, maximum: 5 }, digital: { type: 'integer', minimum: 1, maximum: 5 } } }, comment: { type: 'string', maxLength: 1000 }, consent: { type: 'boolean' } } } },
   }, async (request) => {
     const card = requireCard(request);
     return surveys.submit(card.id, request.body);
