@@ -1,0 +1,13 @@
+body { background: #f4efe9; }
+main { max-width: 1100px; margin: 0 auto; padding: 0 12px 40px; }
+.small { font-size: .85em; }
+td input[type=number], .size { width: 6.5em; min-height: 40px; text-align: right; }
+.plan { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px; }
+.plan-m { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; background: #fff; }
+.plan-m h3 { margin: 4px 0 8px; }
+.plan-m table { width: 100%; }
+.move.in { color: #1b6b2f; font-weight: 800; }
+.move.out { color: var(--danger); font-weight: 800; }
+tr.total td { border-top: 2px solid var(--line); font-weight: 700; }
+.btn-lg { min-height: 60px; font-size: 1.15em; padding: 0 24px; }
+.chip.warn { border-color: var(--warn); color: var(--warn); }

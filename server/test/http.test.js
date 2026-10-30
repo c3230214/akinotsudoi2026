@@ -418,10 +418,11 @@ test('カメラ画面：紙カードの判定とデジタルQRを振り分けた
   const admin = await f.staff('admin');
   await f.setupInventory(admin);
   const pc = await f.staff('printer');
-  // Off by default: each machine's tablet turns camera recognition on.
-  assert.equal((await f.req('POST', '/api/camera/hint', { cookie: pc, body: { machineId: 'garagara-1', color: 'red' } })).json.error, 'CAMERA_ASSIST_OFF');
-  for (const machineId of ['garagara-1', 'garagara-2']) assert.equal((await f.command(admin, { type: 'setCameraAssist', machineId, enabled: true })).status, 200);
+  // On by default; a machine's tablet can turn it off, and then nothing is sent there.
   assert.equal((await f.req('GET', '/api/camera/state', { cookie: pc })).json.machines[0].cameraAssist, true);
+  assert.equal((await f.command(admin, { type: 'setCameraAssist', machineId: 'garagara-1', enabled: false })).status, 200);
+  assert.equal((await f.req('POST', '/api/camera/hint', { cookie: pc, body: { machineId: 'garagara-1', color: 'red' } })).json.error, 'CAMERA_ASSIST_OFF');
+  assert.equal((await f.command(admin, { type: 'setCameraAssist', machineId: 'garagara-1', enabled: true })).status, 200);
   const paper = await f.req('POST', '/api/camera/card-read', { cookie: pc, body: { machineId: 'garagara-2', kind: 'paper', cells: [true, true, true, false, true, null, false, false, true], cornerPresent: true } });
   assert.equal(paper.status, 200, JSON.stringify(paper.json));
   assert.equal(paper.json.preview.lines, 2);
@@ -492,4 +493,40 @@ test('埋め込み：WindowsPC画面の枠に入るカメラ画面と発券画�
     assert.equal(r.res.headers['x-frame-options'], expected, url);
   }
   assert.match((await f.req('GET', '/camera/', { origin: null })).res.headers['content-security-policy'], /frame-ancestors 'self'/);
+});
+
+test('カメラ1の自動振り分け：空いている台へ交互に送り、確認待ち・抽選中・自動認識オフの台は避け、同じカードは二重に送らない', async (t) => {
+  const f = await makeApp();
+  t.after(() => f.close());
+  const admin = await f.staff('admin');
+  await f.setupInventory(admin);
+  const pc = await f.staff('printer');
+  const tokens = f.stampPoints();
+  const card = async () => {
+    const v = f.cookieOf((await f.req('POST', '/api/visitor/cards')).res);
+    for (const i of [0, 1, 2]) await f.req('POST', '/api/visitor/stamps', { cookie: v, body: { payload: `MARUGOTO2026:STAMP:${tokens[i]}`, cellIndex: i } });
+    return f.svc.cards.getCardView(f.svc.cards.cardFromToken(v.split('=')[1])).qrPayload;
+  };
+  const send = (body) => f.req('POST', '/api/camera/card-read', { cookie: pc, body: { machineId: 'auto', ...body } });
+  const a = await card();
+  const r1 = await send({ kind: 'digital', qrPayload: a });
+  assert.equal(r1.status, 200, JSON.stringify(r1.json));
+  assert.equal(r1.json.machineId, 'garagara-1');
+  assert.equal((await send({ kind: 'digital', qrPayload: a })).json.error, 'READ_ALREADY_PENDING');
+  const r2 = await send({ kind: 'paper', cells: [true, true, true, false, false, false, false, false, false], cornerPresent: true });
+  assert.equal(r2.json.machineId, 'garagara-2');
+  // Both machines now have a card waiting.
+  assert.equal((await send({ kind: 'digital', qrPayload: await card() })).json.error, 'NO_MACHINE_READY');
+  assert.equal((await send({ kind: 'paper', cells: Array(9).fill(false), cornerPresent: true })).json.error, 'NO_LINES');
+  // Machine 1 confirms and starts drawing; machine 2 dismisses its read.
+  const acc = await f.req('POST', '/api/staff/cards/accept', { cookie: admin, body: { kind: 'digital', readId: r1.json.readId, machineId: 'garagara-1', expectedMachineRevision: f.svc.draw.getState().machines['garagara-1'].revision, operationId: f.op() } });
+  assert.equal(acc.status, 200);
+  await f.req('POST', `/api/staff/card-reads/${r2.json.readId}/dismiss`, { cookie: admin, body: { machineId: 'garagara-2' } });
+  assert.equal((await send({ kind: 'digital', qrPayload: await card() })).json.machineId, 'garagara-2');
+  // A machine whose tablet turned camera recognition off is never chosen.
+  await f.req('POST', '/api/staff/card-reads/' + (await f.req('GET', '/api/staff/view', { cookie: admin })).json.machines[1].device.pendingRead.readId + '/dismiss', { cookie: admin, body: { machineId: 'garagara-2' } });
+  await f.command(admin, { type: 'setCameraAssist', machineId: 'garagara-2', enabled: false });
+  assert.equal((await send({ kind: 'digital', qrPayload: await card() })).json.error, 'NO_MACHINE_READY');
+  const op = await f.staff('operator');
+  assert.equal((await f.req('POST', '/api/camera/card-read', { cookie: op, body: { machineId: 'auto', kind: 'digital', qrPayload: a } })).status, 403);
 });

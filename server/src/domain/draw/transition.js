@@ -11,6 +11,7 @@ import {
 } from './inventory.js';
 import { clearEmergency, emergencyStop, resumeDrawing, setIntakeClosed } from './safety.js';
 import { updateSettings } from './settings.js';
+import { adjustPrizeTotal, rebalanceBalls } from './ballPlan.js';
 
 export const HANDLERS = Object.freeze({
   startSession,
@@ -33,6 +34,8 @@ export const HANDLERS = Object.freeze({
   refillPlanned,
   setInputMode,
   setCameraAssist,
+  rebalanceBalls,
+  adjustPrizeTotal,
   emergencyStop,
   clearEmergency,
   resumeDrawing,

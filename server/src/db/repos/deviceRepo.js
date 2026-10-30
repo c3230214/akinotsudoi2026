@@ -67,6 +67,16 @@ export function pendingCardRead(db, machineId) {
   return toRead(db.prepare("SELECT * FROM card_reads WHERE machine_id = ? AND status = 'pending' ORDER BY read_id DESC LIMIT 1").get(machineId));
 }
 
+/** A digital card already waiting for confirmation on some machine, if any. */
+export function pendingReadForCard(db, cardId) {
+  return toRead(db.prepare("SELECT * FROM card_reads WHERE qr_card_id = ? AND status = 'pending' ORDER BY read_id DESC LIMIT 1").get(cardId));
+}
+
+/** Latest card read id per machine (0 when none), used to alternate machines. */
+export function lastReadIds(db) {
+  return Object.fromEntries(db.prepare('SELECT machine_id, MAX(read_id) AS last FROM card_reads GROUP BY machine_id').all().map((r) => [r.machine_id, Number(r.last)]));
+}
+
 export function findCardRead(db, readId) {
   return toRead(db.prepare('SELECT * FROM card_reads WHERE read_id = ?').get(readId));
 }

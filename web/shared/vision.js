@@ -135,6 +135,15 @@ export function judgeCard(cur, ref, { threshold = 7, band = 0.25, cornerThreshol
   return { cells, scores, cornerPresent, cornerScore, gain };
 }
 
+/**
+ * How different the card area is from a registered "nothing on the table"
+ * frame (mean over the nine cells, no brightness matching). Used to notice
+ * that a card was put down or taken away.
+ */
+export function presenceScore(cur, table) {
+  return mean(cur.cells.map((f, i) => diffScore(f, table.cells[i])));
+}
+
 // ---------- balls ----------
 export const DEFAULT_BALL_COLORS = Object.freeze({
   red: [196, 48, 48], green: [52, 140, 70], lightblue: [110, 170, 222], white: [232, 232, 232],

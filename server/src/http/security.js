@@ -25,9 +25,9 @@ export function verifyOrigin(config) {
   };
 }
 
-// The Windows PC screen (/pc/) shows the camera and print screens side by
-// side in same-origin frames; every other page refuses to be framed.
-const FRAMEABLE = /^\/(camera|print)\/(?:index\.html)?(?:\?|$)/;
+// The Windows PC screen (/pc/) shows the camera, print and ball dashboard
+// screens in same-origin frames; every other page refuses to be framed.
+const FRAMEABLE = /^\/(camera|print|balls)\/(?:index\.html)?(?:\?|$)/;
 
 export function securityHeaders(reply) {
   const frameable = FRAMEABLE.test(reply.request?.url ?? '');

@@ -60,8 +60,7 @@ sudo -u marugoto-bingo $N scripts/generateStampQr.js --import ../stamp-qr/stamp-
 # 台担当（iPad＝ガラガラ1、Pixel Tablet＝ガラガラ2）と、WindowsPCの発券・カメラ用アカウント
 sudo -u marugoto-bingo $N scripts/createStaff.js --login op1 --name ガラガラ1担当 --role operator
 sudo -u marugoto-bingo $N scripts/createStaff.js --login op2 --name ガラガラ2担当 --role operator
-sudo -u marugoto-bingo $N scripts/createStaff.js --login pc --name WindowsPC --role printer
-sudo -u marugoto-bingo $N scripts/createStaff.js --login prize --name 景品交換所 --role prize
+sudo -u marugoto-bingo $N scripts/createStaff.js --login pc-admin --name WindowsPC --role admin
 
 # （使う場合のみ）別プログラムで検出する会場PC用トークン。ブラウザのカメラ画面には不要
 

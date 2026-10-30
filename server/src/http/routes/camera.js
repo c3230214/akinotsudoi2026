@@ -12,6 +12,12 @@ export function cameraRoutes(app, { auth, draw, devices }) {
   const limiter = createRateLimiter({ windowMs: 60_000, max: 240 });
   const own = (request, machineId) => {
     const a = request.staffAuth;
+    if (machineId === 'auto') {
+      // Automatic routing may pick either machine, so a machine operator cannot use it.
+      if (a.staff.role === 'operator') throw new DomainError('FORBIDDEN', '自動振り分けは発券端末か管理者のアカウントで使います', { status: 403 });
+      if (!limiter.hit(a.sessionHash).allowed) throw new DomainError('RATE_LIMITED', '送信が多すぎます', { status: 429 });
+      return;
+    }
     if (a.staff.role === 'operator' && a.machineId !== machineId) {
       throw new DomainError('MACHINE_NOT_SELECTED', '担当台として選択している台だけ送信できます', { status: 403 });
     }
@@ -29,6 +35,7 @@ export function cameraRoutes(app, { auth, draw, devices }) {
     const status = devices.getDeviceStatus();
     return {
       intakeClosed: s.intakeClosed?.closed ? s.intakeClosed : null,
+      ready: devices.machinesReady().map((m) => m.id),
       machines: Object.values(s.machines).map((m) => ({
         id: m.id, name: m.name, phase: m.phase, stopped: Boolean(m.emergency || m.resumeRequired),
         activeSessionId: m.activeSessionId, pendingRead: Boolean(status[m.id]?.pendingRead),

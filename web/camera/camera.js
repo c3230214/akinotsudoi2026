@@ -1,12 +1,15 @@
 /* global jsQR */
 import { getJson, postJson } from '../shared/api.js';
 import { $, $$, COLOR_LABELS, COLORS, html, render, toast } from '../shared/html.js';
-import { DEFAULT_BALL_COLORS, cardFeatures, judgeBall, judgeCard, roiBlocks, squareToQuad } from '../shared/vision.js';
+import { DEFAULT_BALL_COLORS, cardFeatures, diffScore, judgeBall, judgeCard, presenceScore, roiBlocks, squareToQuad } from '../shared/vision.js';
 
 // Camera station on the venue Windows PC (Chrome). Three webcams:
 //  - card camera: digital card QR (automatic) and paper card scan (button)
 //  - one ball camera per machine: colour shown to the tablet as a hint only
-// Results go to the machine the operator chooses; the tablet operator confirms.
+// Cards are routed automatically (2026-10-30): the server picks a free
+// machine whose tablet has camera recognition on, alternating between the
+// two. A paper card is scanned when it has been lying still on the table;
+// staff can still scan and send by hand. The tablet operator confirms.
 // Settings and calibration are stored in this browser (localStorage).
 
 const SLOTS = [
@@ -28,6 +31,9 @@ const st = {
   lastQr: { text: '', at: 0 },
   ball: {}, // per machine: { present, sentAt, absentTicks, presentTicks, last }
   testMode: store.get('test', false),
+  auto: store.get('auto', true),
+  presence: { prev: null, stable: 0, absent: 0, awaitRemoval: false },
+  waitingSince: 0,
 };
 const ctx = st.canvas.getContext('2d', { willReadFrequently: true });
 
@@ -94,6 +100,7 @@ function renderShell() {
           <button class="btn" id="scan-paper">紙カードを読み取る</button>
           <button class="btn btn-plain btn-small" id="pick">カードの四隅を指定</button>
           <button class="btn btn-plain btn-small" id="ref">何も貼っていないカードを登録</button>
+          <button class="btn btn-plain btn-small" id="table">台だけ（カードなし）を登録</button>
           <label><input type="checkbox" id="test" ${st.testMode ? 'checked' : ''}> 判定値を表示（テスト）</label>
         </div>
         <div class="tools">
@@ -104,7 +111,8 @@ function renderShell() {
       </section>
       <section class="panel">
         <h2>読み取り結果 → 台へ送る</h2>
-        <p class="muted small">デジタルカードは受付用QRをカメラに向けると自動で読み取ります。紙カードは所定の位置に置いて「紙カードを読み取る」を押してください。どちらの台で抽選するかを選ぶと、その台のタブレットに確認待ちとして表示されます。キーボードの 1 / 2 でも送れます。</p>
+        <label class="autosw"><input type="checkbox" id="auto" ${st.auto ? 'checked' : ''}> 自動で振り分ける</label>
+        <p class="muted small">デジタルカードは受付用QRをカメラに向けると、紙カードは台に置いて手を離すと、自動で読み取ります（紙は「台だけ」の登録が必要）。自動振り分けがオンなら、空いている台（タブレットでカメラ自動認識がオン、抽選中でも確認待ちでもない台）へ交互に送ります。両方ふさがっているときは空くまで待って送ります。オフのときや手で選ぶときは下のボタンかキーボードの 1 / 2 で送ります。</p>
         <div id="detected"></div>
         <div class="send" id="send"></div>
         <div id="sent"></div>
@@ -128,6 +136,8 @@ function renderShell() {
   $('#scan-paper').addEventListener('click', scanPaper);
   $('#pick').addEventListener('click', () => { st.picking = []; $('#cam-card').classList.add('picking'); toast('カードの左上、右上、右下、左下の順にクリックしてください', { ms: 6000 }); });
   $('#ref').addEventListener('click', registerReference);
+  $('#table').addEventListener('click', registerTable);
+  $('#auto').addEventListener('change', (e) => { st.auto = e.target.checked; store.set('auto', st.auto); if (st.auto && st.detected) sendAuto(); });
   $('#test').addEventListener('change', (e) => { st.testMode = e.target.checked; store.set('test', st.testMode); });
   for (const id of ['thr', 'cthr']) {
     $(`#${id}`).addEventListener('input', (e) => { $(`#${id}-v`).textContent = e.target.value; store.set(id, Number(e.target.value)); });
@@ -212,7 +222,8 @@ navigator.mediaDevices?.addEventListener?.('devicechange', () => {
 function updateCalibState() {
   const corners = store.get('corners', null);
   const ref = store.get('ref', null);
-  $('#calib-state').textContent = `四隅：${corners ? '指定済み' : '未指定'}　空カード：${ref ? '登録済み' : '未登録'}${corners && ref ? '' : '（紙カードの読取には両方が必要です）'}`;
+  const table = store.get('table', null);
+  $('#calib-state').textContent = `四隅：${corners ? '指定済み' : '未指定'}　空カード：${ref ? '登録済み' : '未登録'}　台だけ：${table ? '登録済み' : '未登録'}${corners && ref ? '' : '（紙カードの読取には四隅と空カードが必要です）'}${corners && ref && !table ? '（紙カードを自動で読むには「台だけ」の登録が必要です）' : ''}`;
 }
 
 function videoPoint(e, video) {
@@ -246,6 +257,51 @@ function registerReference() {
   updateCalibState();
 }
 
+function registerTable() {
+  const corners = store.get('corners', null);
+  if (!corners) { toast('先に四隅を指定してください', { kind: 'error' }); return; }
+  const img = frame($('#cam-card video'));
+  if (!img) { toast('カードカメラの映像がありません', { kind: 'error' }); return; }
+  store.set('table', cardFeatures(img, corners));
+  toast('カードを置いていない台を登録しました', { kind: 'ok' });
+  updateCalibState();
+}
+
+/**
+ * Paper card on the table? Compare with the empty-table frame; when a card
+ * has lain still for about 1.5 s (and no phone QR was seen), scan it once,
+ * then wait until it is taken away before scanning again.
+ */
+function watchPaper() {
+  const corners = store.get('corners', null);
+  const ref = store.get('ref', null);
+  const table = store.get('table', null);
+  const video = $('#cam-card video');
+  if (!corners || !ref || !table || !video || video.readyState < 2) return;
+  const feats = cardFeatures(frame(video), corners);
+  const p = st.presence;
+  const present = presenceScore(feats, table) > store.get('pthr', 12);
+  if (!present) {
+    p.absent += 1;
+    p.stable = 0;
+    if (p.absent >= 2) {
+      p.awaitRemoval = false;
+      if (st.detected?.kind === 'paper' && !st.detected.sent) { st.detected = null; renderDetected(); }
+    }
+    p.prev = feats;
+    return;
+  }
+  p.absent = 0;
+  const still = p.prev && diffScore(feats.cells.flat(), p.prev.cells.flat()) < 2.5;
+  p.stable = still ? p.stable + 1 : 0;
+  p.prev = feats;
+  const qrRecently = Date.now() - (st.qrSeenAt ?? 0) < 4000;
+  if (p.stable >= 3 && !p.awaitRemoval && !qrRecently && !st.detected) {
+    p.awaitRemoval = true;
+    scanPaper();
+  }
+}
+
 function warpedImage(img, corners) {
   const map = squareToQuad(corners);
   const W = 360; const H = 510;
@@ -275,6 +331,7 @@ function scanPaper() {
   const out = judgeCard(cardFeatures(img, corners), ref, { threshold: store.get('thr', 7), cornerThreshold: store.get('cthr', 22) });
   st.detected = { kind: 'paper', cells: out.cells, cornerPresent: out.cornerPresent, scores: out.scores, cornerScore: out.cornerScore, image: warpedImage(img, corners) };
   renderDetected();
+  if (st.auto) sendAuto();
 }
 
 // ---------- card: QR ----------
@@ -287,13 +344,17 @@ function scanQrFrame() {
   ctx.drawImage(video, 0, 0, st.canvas.width, st.canvas.height);
   const img = ctx.getImageData(0, 0, st.canvas.width, st.canvas.height);
   const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
-  if (!code?.data?.startsWith('MARUGOTO2026:CARD:')) return;
+  if (!code?.data) return;
   const now = Date.now();
+  // Any QR in view (a phone) means this is not a paper card lying on the table.
+  st.qrSeenAt = now;
+  if (!code.data.startsWith('MARUGOTO2026:CARD:')) return;
   if (code.data === st.lastQr.text && now - st.lastQr.at < 15_000) return;
   st.lastQr = { text: code.data, at: now };
   st.detected = { kind: 'digital', payload: code.data, cardId: code.data.split(':')[2] };
   navigator.vibrate?.(50);
   renderDetected();
+  if (st.auto) sendAuto();
 }
 
 // ---------- send ----------
@@ -339,6 +400,38 @@ async function send(machineId) {
     pollState();
   } catch (error) {
     render($('#sent'), html`<div class="result err">${error.message}</div>`);
+  }
+}
+
+/**
+ * Let the server choose the machine. If both machines are busy, keep the
+ * card and try again until one is free (the card must stay on the table or
+ * the phone in front of the camera; a new card replaces it).
+ */
+async function sendAuto() {
+  const d = st.detected;
+  if (!d || d.sending) return;
+  d.sending = true;
+  const body = d.kind === 'digital' ? { machineId: 'auto', kind: 'digital', qrPayload: d.payload } : { machineId: 'auto', kind: 'paper', cells: d.cells, cornerPresent: d.cornerPresent, image: d.image };
+  try {
+    const out = await postJson('/api/camera/card-read', body);
+    d.sent = true;
+    render($('#sent'), html`<div class="result ok big"><strong>${out.machineName}へ送りました</strong>：${out.preview.lines}ライン → ガラガラ <strong>${out.preview.draws}回</strong>${out.preview.unsure ? `（要確認 ${out.preview.unsure}マス）` : ''}</div>`);
+    st.detected = null;
+    st.waitingSince = 0;
+    renderDetected();
+    pollState();
+  } catch (error) {
+    if (error.code === 'NO_MACHINE_READY' && st.detected === d) {
+      st.waitingSince ||= Date.now();
+      render($('#sent'), html`<div class="result">空いている台がありません。空いたら送ります…（${Math.round((Date.now() - st.waitingSince) / 1000)}秒）</div>`);
+      setTimeout(() => { if (st.detected === d) { d.sending = false; sendAuto(); } }, 2000);
+      return;
+    }
+    render($('#sent'), html`<div class="result err">${error.message}</div>`);
+    if (st.detected === d) { st.detected = null; renderDetected(); }
+  } finally {
+    d.sending = false;
   }
 }
 
@@ -426,6 +519,7 @@ let tick = 0;
 function loop() {
   tick += 1;
   if (tick % 10 === 0) scanQrFrame();
+  if (tick % 15 === 5) watchPaper();
   if (tick % 9 === 0) { checkBall('garagara-1'); checkBall('garagara-2'); }
   if (tick % 3 === 0) SLOTS.forEach((s) => drawOverlay(s.id));
 }

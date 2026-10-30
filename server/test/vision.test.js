@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CARD_GRID, cardFeatures, judgeBall, judgeCard, roiBlocks, squareToQuad } from '../../web/shared/vision.js';
+import { CARD_GRID, cardFeatures, judgeBall, judgeCard, presenceScore, roiBlocks, squareToQuad } from '../../web/shared/vision.js';
 
 function image(w, h, paint) {
   const data = new Uint8ClampedArray(w * h * 4);
@@ -76,4 +76,10 @@ test('玉：背景との差分で玉の有無を判定し、登録色に近い�
   assert.equal(judgeBall(bg, bg).present, false);
   const between = roiBlocks(image(200, 200, (x, y) => (Math.hypot(x - 100, y - 100) < 30 ? [153, 159, 146] : [90, 90, 95])), roi);
   assert.equal(judgeBall(between, bg).color, null);
+});
+
+test('カードの有無：台だけの映像との差で、カードが置かれたかを見分ける', () => {
+  const table = cardFeatures(image(480, 600, () => [60, 62, 70]), corners);
+  assert.ok(presenceScore(cardFeatures(cardImage(), corners), table) > 30);
+  assert.ok(presenceScore(cardFeatures(image(480, 600, () => [64, 64, 72]), corners), table) < 3);
 });

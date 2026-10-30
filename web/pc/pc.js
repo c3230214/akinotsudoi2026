@@ -11,3 +11,16 @@ async function keepAwake() {
   } catch { /* falls back to the Windows power settings */ }
 }
 keepAwake();
+
+// 「玉と景品」 opens the ball and prize dashboard over the camera frame. The
+// camera frame stays loaded (not removed), so scanning keeps running.
+const dash = document.getElementById('dash');
+const toggle = document.getElementById('dash-toggle');
+toggle.addEventListener('click', () => {
+  const open = dash.hidden;
+  dash.hidden = !open;
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.textContent = open ? 'カメラに戻る' : '玉と景品';
+  const f = document.getElementById('f-balls');
+  if (open && !f.src) f.src = f.dataset.src;
+});

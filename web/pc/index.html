@@ -12,12 +12,18 @@
   <header class="pcbar">
     <strong>WindowsPC</strong><span class="muted">カメラ3台で読取 ／ MP-B20で引換券を発券</span>
     <nav class="pclinks">
-      <a class="btn btn-plain btn-small" href="/staff/#redeem" target="mb-staff">景品引換・管理（スタッフ画面）</a>
+      <button type="button" class="btn btn-small" id="dash-toggle" aria-expanded="false" aria-controls="dash">玉と景品</button>
+      <a class="btn btn-plain btn-small" href="/staff/" target="mb-staff">スタッフ画面</a>
       <a class="btn btn-plain btn-small" href="/admin/" target="mb-admin">管理パネル</a>
     </nav>
   </header>
   <main class="pcmain">
-    <iframe id="f-camera" title="カメラ画面" src="/camera/" allow="camera"></iframe>
+    <div class="left">
+      <iframe id="f-camera" title="カメラ画面" src="/camera/" allow="camera"></iframe>
+      <section id="dash" class="dash" hidden aria-label="玉と景品">
+        <iframe id="f-balls" title="玉と景品" data-src="/balls/"></iframe>
+      </section>
+    </div>
     <iframe id="f-print" title="発券画面" src="/print/"></iframe>
   </main>
 </body>

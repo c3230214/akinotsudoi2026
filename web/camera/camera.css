@@ -30,3 +30,6 @@ main { max-width: 1500px; margin: 0 auto; padding: 0 12px 40px; }
 .tools input[type=checkbox] { min-height: 0; width: 20px; height: 20px; }
 .cam .cam-state { position: absolute; left: 8px; bottom: 8px; right: 8px; background: rgba(0, 0, 0, .7); color: #fff; padding: 4px 8px; border-radius: 6px; font-weight: 700; }
 .cam .cam-state.bad { background: rgba(180, 30, 30, .85); }
+.autosw { display: flex; gap: 8px; align-items: center; font-weight: 800; font-size: 1.1em; min-height: 44px; }
+.autosw input { width: 26px; height: 26px; min-height: 0; }
+.result.big { font-size: 1.25em; }

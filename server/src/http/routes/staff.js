@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import QRCode from 'qrcode';
 import { DomainError } from '../../domain/errors.js';
 import { listActionLog } from '../../db/repos/drawRepo.js';
+import { planBallMix } from '../../domain/draw/ballPlan.js';
 import { COOKIES, clientIp, cookieOptions } from '../security.js';
 import { requireStaff, staffActor } from '../auth.js';
 
@@ -31,6 +32,8 @@ export const COMMAND_ROLES = Object.freeze({
   addRefillPlan: ['admin'],
   updateSettings: ['admin'],
   setIntakeClosed: ['admin'],
+  rebalanceBalls: ['admin'],
+  adjustPrizeTotal: ['admin'],
 });
 
 const BODY_LIMIT_KEYS = 40;
@@ -175,6 +178,17 @@ export function staffRoutes(app, { auth, draw, cards, devices, surveys, db }) {
     if (!img || !fs.existsSync(img.path)) throw new DomainError('NOT_FOUND', '画像が見つかりません', { status: 404 });
     reply.header('Cache-Control', 'private, max-age=300');
     return reply.type(img.mime).send(fs.createReadStream(img.path));
+  });
+
+  // Ball mix plan for the dashboard: read-only, computed from the current state.
+  app.get('/api/staff/ball-plan', {
+    preHandler: requireStaff(auth, 'admin'),
+    schema: { querystring: { type: 'object', additionalProperties: { type: 'integer', minimum: 0, maximum: 2000 } } },
+  }, async (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    const s = draw.getState();
+    const sizes = Object.fromEntries(Object.values(s.machines).map((m) => [m.id, request.query[m.id] ?? Object.values(m.contents).reduce((a, n) => a + n, 0)]));
+    return planBallMix(s, sizes);
   });
 
   app.get('/api/staff/audit', {

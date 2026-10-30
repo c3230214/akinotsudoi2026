@@ -3,7 +3,7 @@ import path from 'node:path';
 import { tx } from '../db/connection.js';
 import {
   nextReadSeq, findDeviceEvent, findImage, findMachineByTokenHash, insertCardRead, insertDeviceEvent, insertImage, lastSeqOf,
-  listMachineRows, listStreams, pendingCardRead, recordHeartbeat, setLastSeq,
+  lastReadIds, listMachineRows, listStreams, pendingCardRead, pendingReadForCard, recordHeartbeat, setLastSeq,
 } from '../db/repos/deviceRepo.js';
 import { DomainError, fail, invalid } from '../domain/errors.js';
 import { validateMarks, COLORS, completeLines, entitledDraws } from '../domain/rules.js';
@@ -188,8 +188,34 @@ export function createDeviceService({ db, clock, draw, bus, imageDir, imageReten
    * detection (null = unsure). Digital: the QR text, verified now and never
    * stored. Either way the read waits for the operator on that machine's tablet.
    */
+  /**
+   * Machines that can take a card from the camera now: camera recognition on
+   * at the tablet, not stopped, idle and without a read waiting there.
+   */
+  function machinesReady() {
+    const s = draw.getState();
+    if (s.intakeClosed?.closed) return [];
+    return Object.values(s.machines).filter((m) => m.cameraAssist === true && !m.emergency && !m.resumeRequired && m.phase === 'idle' && !pendingCardRead(db, m.id));
+  }
+
+  /**
+   * Automatic routing (2026-10-30 request): of the ready machines, the one
+   * that received a card least recently, so the two machines alternate.
+   */
+  function chooseMachine() {
+    const ready = machinesReady();
+    if (!ready.length) fail('NO_MACHINE_READY', '受け付けられる台がありません（抽選中、確認待ち、停止中、またはタブレットでカメラ自動認識がオフ）', { status: 409 });
+    const last = lastReadIds(db);
+    return ready.sort((a, b) => (last[a.id] ?? 0) - (last[b.id] ?? 0))[0].id;
+  }
+
+  /**
+   * Card read from the camera station. machineId 'auto' lets the server pick
+   * the machine; the choice is re-checked inside the write transaction.
+   */
   async function receiveBrowserCardRead(machineId, body) {
-    if (!draw.getState().machines[machineId]) fail('UNKNOWN_MACHINE', '台が見つかりません', { status: 404 });
+    const auto = machineId === 'auto';
+    if (!auto && !draw.getState().machines[machineId]) fail('UNKNOWN_MACHINE', '台が見つかりません', { status: 404 });
     if (!['paper', 'digital'].includes(body?.kind)) invalid('kind must be paper or digital');
     let qrCardId = null;
     let preview = null;
@@ -198,25 +224,34 @@ export function createDeviceService({ db, clock, draw, bus, imageDir, imageReten
       if (typeof body.cornerPresent !== 'boolean' && body.cornerPresent !== null) invalid('cornerPresent must be boolean or null');
       const lines = completeLines(body.cells);
       preview = { lines, draws: entitledDraws(lines), unsure: body.cells.filter((c) => c === null).length };
+      if (auto && preview.draws === 0 && preview.unsure === 0) fail('NO_LINES', 'ラインがそろっていない紙カードです', { status: 422 });
     } else {
       if (typeof body.qrPayload !== 'string' || body.qrPayload.length > 300) invalid('qrPayload is required');
       qrCardId = cards.verifyDigital(body.qrPayload).id;
       preview = cards.previewById(qrCardId);
       if (preview.used) fail('CARD_ALREADY_USED', `このカードは ${preview.usedAt} に受付済みです`);
       if (preview.draws === 0) fail('NO_LINES', 'ビンゴのラインが成立していないカードです', { status: 422 });
+      const waiting = pendingReadForCard(db, qrCardId);
+      if (waiting) fail('READ_ALREADY_PENDING', `このカードは${draw.getState().machines[waiting.machineId]?.name ?? waiting.machineId}で確認待ちです`, { status: 409, details: { machineId: waiting.machineId } });
     }
+    if (auto) chooseMachine(); // fail early, before the image is stored
     let imageId = null;
     if (typeof body.image === 'string' && body.image.startsWith('data:image/jpeg;base64,')) {
-      imageId = (await saveImage(machineId, Buffer.from(body.image.slice(23), 'base64'), 'image/jpeg')).imageId;
+      imageId = (await saveImage(auto ? CAMERA_BOOT : machineId, Buffer.from(body.image.slice(23), 'base64'), 'image/jpeg')).imageId;
     }
     const at = clock();
-    const readId = tx(db, () => insertCardRead(db, {
-      machineId, bootId: CAMERA_BOOT, readSeq: nextReadSeq(db, machineId, CAMERA_BOOT), kind: body.kind,
-      cells: body.kind === 'paper' ? body.cells : null, cornerPresent: body.kind === 'paper' ? body.cornerPresent : null,
-      hasQr: body.kind === 'digital', qrCardId, qrError: null, readAt: at, receivedAt: at, imageId,
-    }));
-    bus.publish('draw', { touched: [machineId], events: [] });
-    return { readId, machineId, preview };
+    const out = tx(db, () => {
+      const target = auto ? chooseMachine() : machineId;
+      if (qrCardId && pendingReadForCard(db, qrCardId)) fail('READ_ALREADY_PENDING', 'このカードは確認待ちです', { status: 409 });
+      const readId = insertCardRead(db, {
+        machineId: target, bootId: CAMERA_BOOT, readSeq: nextReadSeq(db, target, CAMERA_BOOT), kind: body.kind,
+        cells: body.kind === 'paper' ? body.cells : null, cornerPresent: body.kind === 'paper' ? body.cornerPresent : null,
+        hasQr: body.kind === 'digital', qrCardId, qrError: null, readAt: at, receivedAt: at, imageId,
+      });
+      return { readId, machineId: target };
+    });
+    bus.publish('draw', { touched: [out.machineId], events: [] });
+    return { ...out, machineName: draw.getState().machines[out.machineId].name, preview };
   }
 
   /** Ball colour seen by a camera: a hint shown on the tablet, never recorded by itself. */
@@ -266,5 +301,5 @@ export function createDeviceService({ db, clock, draw, bus, imageDir, imageReten
     return read;
   }
 
-  return { receiveBrowserCardRead, addHint, listHints, authenticate, receiveBallEvent, receiveCardRead, receiveHeartbeat, saveImage, imagePath, getDeviceState, getDeviceStatus, isOnline, deviceOnlineMap };
+  return { receiveBrowserCardRead, machinesReady, addHint, listHints, authenticate, receiveBallEvent, receiveCardRead, receiveHeartbeat, saveImage, imagePath, getDeviceState, getDeviceStatus, isOnline, deviceOnlineMap };
 }
